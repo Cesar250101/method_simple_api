@@ -1,0 +1,39 @@
+<odoo>
+  <data>
+
+    <!-- model.name inherit form view -->
+    <record id="method_simple_api.view_company_form" model="ir.ui.view">
+      <field name="name">method.simple.api.view.company.form</field>
+      <field name="model">res.company</field>
+      <field name="inherit_id" ref="base.view_company_form"/>
+      <field name="arch" type="xml">
+            <xpath expr="//page" position="after">            
+                <page name="simpleapi" string="SimpleAPI">
+                  <group>
+                    <group name="autenticacion" string="Datos Autenticación">                       
+                      <button string="Obtener Token" name="basic_auth" type="object" class="oe_highlight"/>
+                      <field name="simple_api_servidor"/>                      
+                      <field name="simple_api_usuario"/>
+                      <field name="simple_api_password"/>
+                      <field name="simple_api_token" password="True"/>       
+                      <field name="simple_api_password_certificado"/>
+                      <field name="simple_api_rut_certificado"/>                      
+                    </group>
+                    <group name="rutas" string="Rutas de Archivos">                       
+                      <field name="simple_api_ruta_certificado"/>       
+                      <field name="simple_api_nombre_certificado"/>
+                      <field name="simple_api_ruta_dte"/>
+                      <field name="simple_api_ruta_caf"/>
+                      
+                    </group>                    
+
+                  </group>
+                </page>
+            </xpath>
+        
+      </field>
+    </record>
+
+
+  </data>
+</odoo>
