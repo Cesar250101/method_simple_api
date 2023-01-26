@@ -239,6 +239,7 @@ class AccountInvoice(models.Model):
             self.sii_message=dict_text['responseXml']
 
             self.sii_result='Enviado'
+            self.sii_document_number=folio
 
             nombre_archivo=self._obtener_nombre_xml(response[1])
             with open(response[1], 'r') as f:
