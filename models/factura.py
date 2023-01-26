@@ -402,7 +402,7 @@ class AccountInvoice(models.Model):
         archivo_caf=caf.obtener_caf()
         print(archivo_caf)
         nombre_caf=archivo_caf[0]['name']
-        ruta_completa_caf=compañia.simple_api_ruta_caf+'\\'+nombre_caf
+        ruta_completa_caf=compañia.simple_api_ruta_caf+'/'+nombre_caf
         print(payload)
         files = [
                 ('input', ('', json.dumps(payload), 'application/json')),
