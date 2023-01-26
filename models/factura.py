@@ -238,11 +238,7 @@ class AccountInvoice(models.Model):
         if envio.status_code==200:
             self.sii_message=dict_text['responseXml']
 
-            self.sii_track_id=dict_text['trackId']
-            if dict_text['estado'] in('RSC','RFR','RCT'):
-                self.sii_result='Rechazado'
-            else:
-                self.sii_result='Proceso'
+            self.sii_result='Enviado'
 
             nombre_archivo=self._obtener_nombre_xml(response[1])
             with open(response[1], 'r') as f:
@@ -322,7 +318,7 @@ class AccountInvoice(models.Model):
     def generar_caratula(self,company,receptor='60803000-K' ):
         caratula={
                     "RutEmisor": company.partner_id.document_number.replace('.',''),
-                    "RutReceptor": receptor if self.document_class_id.sii_code!=110 else '55555555-5',
+                    "RutReceptor": receptor,
                     "FechaResolucion": company.dte_resolution_date.isoformat(),
                     "NumeroResolucion": company.dte_resolution_number
                 }
