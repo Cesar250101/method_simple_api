@@ -406,7 +406,7 @@ class AccountInvoice(models.Model):
         print(payload)
         files = [
                 ('input', ('', json.dumps(payload), 'application/json')),
-                ('files', (compañia.simple_api_nombre_certificado, open(compañia.simple_api_ruta_certificado+'\\'+compañia.simple_api_nombre_certificado, 'rb'), 'application/x-pkcs12')),
+                ('files', (compañia.simple_api_nombre_certificado, open(compañia.simple_api_ruta_certificado+'/'+compañia.simple_api_nombre_certificado, 'rb'), 'application/x-pkcs12')),
                 ('files', (nombre_caf, open(ruta_completa_caf, 'rb'), 'text/xml'))
             ]            
 
