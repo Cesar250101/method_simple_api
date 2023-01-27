@@ -19,7 +19,8 @@ class AccountInvoice(models.Model):
     @api.multi
     def invoice_validate(self):
         factura=self._generar_xml()
-        # return super(AccountInvoice, self).invoice_validate()        
+        if self.document_class_id.sii_code not in(46,110):
+            return super(AccountInvoice, self).invoice_validate()        
 
 
 
