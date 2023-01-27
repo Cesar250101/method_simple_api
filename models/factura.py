@@ -99,174 +99,175 @@ class AccountInvoice(models.Model):
 
     @api.one
     def _generar_xml(self):
-        compañia=self.env.user.company_id
-        ruta_certificado=compañia.simple_api_ruta_certificado
-#Obtiene folios desde la clase de documentos        
-        journal_document_class_id=self.env['account.journal.sii_document_class'].search([('sii_document_class_id','=',self.document_class_id.id)])         
-        folio=journal_document_class_id.sequence_id.next_by_id()                
-        codigos_actividad=[]
-        for a in self._obtener_acteco():
-            codigos_actividad.append(a[0])
+        if self.document_class_id.sii_code in(46,110):
+            compañia=self.env.user.company_id
+            ruta_certificado=compañia.simple_api_ruta_certificado
+    #Obtiene folios desde la clase de documentos        
+            journal_document_class_id=self.env['account.journal.sii_document_class'].search([('sii_document_class_id','=',self.document_class_id.id)])         
+            folio=journal_document_class_id.sequence_id.next_by_id()                
+            codigos_actividad=[]
+            for a in self._obtener_acteco():
+                codigos_actividad.append(a[0])
 
-        if self.use_documents and self.journal_id.type=='purchase': 
-            url = compañia.simple_api_servidor+"/api/v1/dte/generar"
-            payload={
-            "Documento": {
-                "Encabezado": {
-                    "IdentificacionDTE": {
-                        "TipoDTE": self.document_class_id.sii_code,
-                        "Folio":folio,
-                        "FechaEmision": self.date_invoice.isoformat(),
-                        "FechaVencimiento": self.date_due.isoformat(),
-                        "FormaPago": 2
-                    },
-                    "Emisor": {
-                        "Rut": compañia.partner_id.document_number.replace('.',''),
-                        "RazonSocial": compañia.partner_id.name,
-                        "Giro": compañia.partner_id.activity_description.name,
-                        "ActividadEconomica": codigos_actividad,
-                        "DireccionOrigen": compañia.partner_id.street,
-                        "ComunaOrigen": compañia.partner_id.city_id.name,
-                        "Telefono": [compañia.partner_id.phone if compañia.partner_id.phone else None,compañia.partner_id.mobile if compañia.partner_id.mobile else None]
-                    },
-                    "Receptor": {
-                        "Rut": self.partner_id.document_number,
-                        "RazonSocial": self.partner_id.name,
-                        "Direccion": self.partner_id.street,
-                        "Comuna": self.partner_id.city_id.name,
-                        "Giro": self.partner_id.activity_description.name,
-                        "Contacto": self.partner_id.mobile if self.partner_id.mobile else None
-                    },
-                    "RutSolicitante": "",
-                    "Transporte": None,
-                    "Totales": {
-                        "MontoNeto": int(self.amount_untaxed),
-                        "TasaIVA": 19,
-                        "IVA": int(self.amount_tax),
-                        "MontoTotal": int(self.amount_total)
-                    }
-                },
-                "Detalles":self._obtener_lineas(),
-               
-            },
-
-            # payload["Certificado"]=self._get_certificado(compañia)
-
-            # "Certificado": {
-            #     "Rut": compañia.simple_api_rut_certificado,
-            #     "Password": compañia.simple_api_password_certificado
-            #                 }
-            }
-            payload["Certificado"]=self._get_certificado(compañia)            
-#Agrega las referencias del documento            
-            if self.referencias:
-                payload["Referencias"]=self._obtener_referencias()
-            if self.global_descuentos_recargos:
-                payload["DescuentosRecargos"]=self._obtener_DR()
-            json_payload=json.dumps(payload)
-
-#Firma y timbre el XML            
-            files=self._firmar_Timbrar_xml(payload,compañia)            
-            response = self.generar_xml_dte(files,folio)
-            sobre=self.generar_sobre_envio(response[1],compañia,folio,receptor='60803000-K')
-            envio=self.enviar_sobre_envio(sobre[1],compañia,tipo=1)
-        elif self.document_class_id.sii_code==110:
-            payload={
-            "Exportaciones":{
-                "Encabezado":{
-                    "IdentificacionDTE":{
-                        "TipoDTE":self.document_class_id.sii_code,
-                        "Folio":folio,
-                        "FechaEmision":self.date_invoice.isoformat(),
-                        "FechaVencimiento":self.date_due.isoformat(),
-                        "FormaPago":self.payment_term_id.dte_sii_code,
-                        "FormaPagoExportacion":self.payment_term_id.forma_pago_aduanas.code,
-                        "MedioPago":self.payment_term_id.modalidad_venta.code,
-                        "IndServicio":self.ind_servicio
-                    },
-
-                    "Emisor": {
-                        "Rut": compañia.partner_id.document_number.replace('.',''),
-                        "RazonSocial": compañia.partner_id.name,
-                        "Giro": compañia.partner_id.activity_description.name,
-                        "ActividadEconomica": codigos_actividad,
-                        "DireccionOrigen": compañia.partner_id.street,
-                        "ComunaOrigen": compañia.partner_id.city_id.name,
-                        "Telefono": [compañia.partner_id.phone if compañia.partner_id.phone else None]
-                    },
-
-                    "Receptor": {
-                        "Rut": '55555555-5',
-                        "RazonSocial": self.partner_id.name,
-                        "Direccion": self.partner_id.street,
-                        "Comuna": self.partner_id.city_id.name,
-                        "Giro": self.partner_id.activity_description.name,
-                        "Extranjero":{
-                        "Nacionalidad":self.partner_id.country_id.vat_label
+            if self.use_documents and self.journal_id.type=='purchase': 
+                url = compañia.simple_api_servidor+"/api/v1/dte/generar"
+                payload={
+                "Documento": {
+                    "Encabezado": {
+                        "IdentificacionDTE": {
+                            "TipoDTE": self.document_class_id.sii_code,
+                            "Folio":folio,
+                            "FechaEmision": self.date_invoice.isoformat(),
+                            "FechaVencimiento": self.date_due.isoformat(),
+                            "FormaPago": 2
+                        },
+                        "Emisor": {
+                            "Rut": compañia.partner_id.document_number.replace('.',''),
+                            "RazonSocial": compañia.partner_id.name,
+                            "Giro": compañia.partner_id.activity_description.name,
+                            "ActividadEconomica": codigos_actividad,
+                            "DireccionOrigen": compañia.partner_id.street,
+                            "ComunaOrigen": compañia.partner_id.city_id.name,
+                            "Telefono": [compañia.partner_id.phone if compañia.partner_id.phone else None,compañia.partner_id.mobile if compañia.partner_id.mobile else None]
+                        },
+                        "Receptor": {
+                            "Rut": self.partner_id.document_number,
+                            "RazonSocial": self.partner_id.name,
+                            "Direccion": self.partner_id.street,
+                            "Comuna": self.partner_id.city_id.name,
+                            "Giro": self.partner_id.activity_description.name,
+                            "Contacto": self.partner_id.mobile if self.partner_id.mobile else None
+                        },
+                        "RutSolicitante": "",
+                        "Transporte": None,
+                        "Totales": {
+                            "MontoNeto": int(self.amount_untaxed),
+                            "TasaIVA": 19,
+                            "IVA": int(self.amount_tax),
+                            "MontoTotal": int(self.amount_total)
                         }
                     },
+                    "Detalles":self._obtener_lineas(),
+                
+                },
 
-                    "Transporte":{
-                        "Aduana":{
-                            "CodigoModalidadVenta":self.payment_term_id.modalidad_venta.code
+                # payload["Certificado"]=self._get_certificado(compañia)
+
+                # "Certificado": {
+                #     "Rut": compañia.simple_api_rut_certificado,
+                #     "Password": compañia.simple_api_password_certificado
+                #                 }
+                }
+                payload["Certificado"]=self._get_certificado(compañia)            
+    #Agrega las referencias del documento            
+                if self.referencias:
+                    payload["Referencias"]=self._obtener_referencias()
+                if self.global_descuentos_recargos:
+                    payload["DescuentosRecargos"]=self._obtener_DR()
+                json_payload=json.dumps(payload)
+
+    #Firma y timbre el XML            
+                files=self._firmar_Timbrar_xml(payload,compañia)            
+                response = self.generar_xml_dte(files,folio)
+                sobre=self.generar_sobre_envio(response[1],compañia,folio,receptor='60803000-K')
+                envio=self.enviar_sobre_envio(sobre[1],compañia,tipo=1)
+            elif self.document_class_id.sii_code==110:
+                payload={
+                "Exportaciones":{
+                    "Encabezado":{
+                        "IdentificacionDTE":{
+                            "TipoDTE":self.document_class_id.sii_code,
+                            "Folio":folio,
+                            "FechaEmision":self.date_invoice.isoformat(),
+                            "FechaVencimiento":self.date_due.isoformat(),
+                            "FormaPago":self.payment_term_id.dte_sii_code,
+                            "FormaPagoExportacion":self.payment_term_id.forma_pago_aduanas.code,
+                            "MedioPago":self.payment_term_id.modalidad_venta.code,
+                            "IndServicio":self.ind_servicio
+                        },
+
+                        "Emisor": {
+                            "Rut": compañia.partner_id.document_number.replace('.',''),
+                            "RazonSocial": compañia.partner_id.name,
+                            "Giro": compañia.partner_id.activity_description.name,
+                            "ActividadEconomica": codigos_actividad,
+                            "DireccionOrigen": compañia.partner_id.street,
+                            "ComunaOrigen": compañia.partner_id.city_id.name,
+                            "Telefono": [compañia.partner_id.phone if compañia.partner_id.phone else None]
+                        },
+
+                        "Receptor": {
+                            "Rut": '55555555-5',
+                            "RazonSocial": self.partner_id.name,
+                            "Direccion": self.partner_id.street,
+                            "Comuna": self.partner_id.city_id.name,
+                            "Giro": self.partner_id.activity_description.name,
+                            "Extranjero":{
+                            "Nacionalidad":self.partner_id.country_id.vat_label
+                            }
+                        },
+
+                        "Transporte":{
+                            "Aduana":{
+                                "CodigoModalidadVenta":self.payment_term_id.modalidad_venta.code
+                            }
+                        },
+
+                        "Totales":{
+                            "TipoMoneda":"DOLAR_ESTADOUNIDENSE",
+                            "MontoExento":self.amount_total,
+                            "MontoTotal":self.amount_total
+                        },
+                        "OtraMoneda":{
+                            "TipoMoneda":"PESO_CHILENO",
+                            "TipoCambio":self.currency_id.inverse_rate,
+                            "MontoExento":round(self.amount_total*self.currency_id.inverse_rate,0),
+                            "MontoTotal":round(self.amount_total*self.currency_id.inverse_rate,0) 
                         }
                     },
-
-                    "Totales":{
-                        "TipoMoneda":"DOLAR_ESTADOUNIDENSE",
-                        "MontoExento":self.amount_total,
-                        "MontoTotal":self.amount_total
-                    },
-                    "OtraMoneda":{
-                        "TipoMoneda":"PESO_CHILENO",
-                        "TipoCambio":self.currency_id.inverse_rate,
-                        "MontoExento":round(self.amount_total*self.currency_id.inverse_rate,0),
-                        "MontoTotal":round(self.amount_total*self.currency_id.inverse_rate,0) 
-                    }
+                    "Detalles":self._obtener_lineas(),
+                    # "DescuentosRecargos":self._obtener_DR(),
                 },
-                "Detalles":self._obtener_lineas(),
-                # "DescuentosRecargos":self._obtener_DR(),
-            },
-            }
-            payload["Certificado"]=self._get_certificado(compañia)      
-            files=self._firmar_Timbrar_xml(payload,compañia)            
-            response = self.generar_xml_dte(files,folio)
-            sobre=self.generar_sobre_envio(response[1],compañia,folio,receptor='60803000-K')
-            envio=self.enviar_sobre_envio(sobre[1],compañia,tipo=1)
-        dict_text = json.loads(envio.text)  
-        print(envio.status_code)          
-        if envio.status_code==200:
-            self.sii_message=dict_text['responseXml']
+                }
+                payload["Certificado"]=self._get_certificado(compañia)      
+                files=self._firmar_Timbrar_xml(payload,compañia)            
+                response = self.generar_xml_dte(files,folio)
+                sobre=self.generar_sobre_envio(response[1],compañia,folio,receptor='60803000-K')
+                envio=self.enviar_sobre_envio(sobre[1],compañia,tipo=1)
+            dict_text = json.loads(envio.text)  
+            print(envio.status_code)          
+            if envio.status_code==200:
+                self.sii_message=dict_text['responseXml']
 
-            self.sii_result='Enviado'
-            self.sii_document_number=folio
+                self.sii_result='Enviado'
+                self.sii_document_number=folio
 
-            nombre_archivo=self._obtener_nombre_xml(response[1])
-            with open(response[1], 'r') as f:
-                dte_envio = f.read()
+                nombre_archivo=self._obtener_nombre_xml(response[1])
+                with open(response[1], 'r') as f:
+                    dte_envio = f.read()
 
-            if not self.sii_xml_request:
-                envio_id = self.env["sii.xml.envio"].create({
-                        'name': nombre_archivo,
-                        'xml_envio': dte_envio,
-                        'invoice_ids': [[6,0, self.ids]],
-                    })      
-            self.write({
-                'state':'open'
-            })
-            tree = ET.parse(response[1])
-            root = tree.getroot()
-            if self.document_class_id.sii_code!=110:      
-                tag = root.find("Documento")  
+                if not self.sii_xml_request:
+                    envio_id = self.env["sii.xml.envio"].create({
+                            'name': nombre_archivo,
+                            'xml_envio': dte_envio,
+                            'invoice_ids': [[6,0, self.ids]],
+                        })      
+                self.write({
+                    'state':'open'
+                })
+                tree = ET.parse(response[1])
+                root = tree.getroot()
+                if self.document_class_id.sii_code!=110:      
+                    tag = root.find("Documento")  
+                else:
+                    tag = root.find("Exportaciones")  
+
+                ted=tag.find("TED")
+                tag_string = ET.tostring(ted, encoding='utf8', method='xml')
+                self.sii_barcode=tag_string
+                self._get_barcode_img()
             else:
-                tag = root.find("Exportaciones")  
-
-            ted=tag.find("TED")
-            tag_string = ET.tostring(ted, encoding='utf8', method='xml')
-            self.sii_barcode=tag_string
-            self._get_barcode_img()
-        else:
-            raise UserError("Ocurrio un error al enviar el documento al SII, la razón es {}".format(dict_text['responseXml']))
+                raise UserError("Ocurrio un error al enviar el documento al SII, la razón es {}".format(dict_text['responseXml']))
 
     @api.model
     def _get_timbre(self,pathDTE):
