@@ -105,7 +105,10 @@ class AccountInvoice(models.Model):
             ruta_certificado=compañia.simple_api_ruta_certificado
     #Obtiene folios desde la clase de documentos        
             journal_document_class_id=self.env['account.journal.sii_document_class'].search([('sii_document_class_id','=',self.document_class_id.id)])         
-            folio=journal_document_class_id.sequence_id.next_by_id()                
+            domain=[('sii_code','=',self.document_class_id.sii_code),
+            ('journal_id','=',self.journal_id.id)]
+            folio=self.env['account.invoice'].search(domain,order="sii_document_number desc", limit=1).sii_document_number
+            folio+=1
             codigos_actividad=[]
             for a in self._obtener_acteco():
                 codigos_actividad.append(a[0])
@@ -267,6 +270,11 @@ class AccountInvoice(models.Model):
                 tag_string = ET.tostring(ted, encoding='utf8', method='xml')
                 self.sii_barcode=tag_string
                 self._get_barcode_img()
+#Actualiza secuencia
+                secuencia=self.env['ir.sequence'].search([('sii_document_class_id','=',self.document_class_id.id)])
+                secuencia.write({
+                                    'number_next_actual':folio
+                                })
             else:
                 raise UserError("Ocurrio un error al enviar el documento al SII, la razón es {}".format(dict_text['responseXml']))
 
@@ -310,7 +318,7 @@ class AccountInvoice(models.Model):
         url = compañia.simple_api_servidor+"/api/v1/dte/generar"
 
         response = requests.post(url, headers=headers, files=files)
-        pathDTE = os.path.join(compañia.simple_api_ruta_dte,'DTE_'+str(self.document_class_id.sii_code)+'_'+compañia.partner_id.document_number.replace('.','')+'_'+folio+'.xml' )
+        pathDTE = os.path.join(compañia.simple_api_ruta_dte,'DTE_'+str(self.document_class_id.sii_code)+'_'+compañia.partner_id.document_number.replace('.','')+'_'+str(folio)+'.xml' )
         with codecs.open(pathDTE,'w+',"ISO-8859-1") as f:            
             f.write(response.text)
             dte=f.read()
@@ -344,7 +352,7 @@ class AccountInvoice(models.Model):
             }        
 
         response = requests.post(url, headers=headers, files=files)
-        pathDTE = os.path.join(company.simple_api_ruta_dte,'Envio_DTE_'+str(self.document_class_id.sii_code)+'_'+company.partner_id.document_number.replace('.','')+'_'+folio+'.xml' )
+        pathDTE = os.path.join(company.simple_api_ruta_dte,'Envio_DTE_'+str(self.document_class_id.sii_code)+'_'+company.partner_id.document_number.replace('.','')+'_'+str(folio)+'.xml' )
 
         with codecs.open(pathDTE, 'w+', encoding='iso-8859-1') as f:
             f.write(response.text)
