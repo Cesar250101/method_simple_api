@@ -139,9 +139,9 @@ class AccountInvoice(models.Model):
                         "Receptor": {
                             "Rut": self.partner_id.document_number,
                             "RazonSocial": self.partner_id.name,
-                            "Direccion": self.partner_id.street,
-                            "Comuna": self.partner_id.city_id.name,
-                            "Giro": self.partner_id.activity_description.name,
+                            "Direccion": self.partner_id.street if self.partner_id.street else None,
+                            "Comuna": self.partner_id.city_id.name if self.partner_id.city_id.name else None,
+                            "Giro": self.partner_id.activity_description.name if self.partner_id.activity_description.name else None,
                             "Contacto": self.partner_id.mobile if self.partner_id.mobile else None
                         },
                         "RutSolicitante": "",
