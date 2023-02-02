@@ -106,7 +106,9 @@ class AccountInvoice(models.Model):
     #Obtiene folios desde la clase de documentos        
             journal_document_class_id=self.env['account.journal.sii_document_class'].search([('sii_document_class_id','=',self.document_class_id.id)])         
             domain=[('sii_code','=',self.document_class_id.sii_code),
-            ('journal_id','=',self.journal_id.id)]
+            ('journal_id','=',self.journal_id.id),
+            ('sii_document_number','!=',False)
+            ]
             folio=self.env['account.invoice'].search(domain,order="sii_document_number desc", limit=1).sii_document_number
             folio+=1
             codigos_actividad=[]
@@ -413,11 +415,11 @@ class AccountInvoice(models.Model):
         archivo_caf=caf.obtener_caf()
         print(archivo_caf)
         nombre_caf=archivo_caf[0]['name']
-        ruta_completa_caf=compañia.simple_api_ruta_caf+'/'+nombre_caf
+        ruta_completa_caf=compañia.simple_api_ruta_caf+nombre_caf
         print(payload)
         files = [
                 ('input', ('', json.dumps(payload), 'application/json')),
-                ('files', (compañia.simple_api_nombre_certificado, open(compañia.simple_api_ruta_certificado+'/'+compañia.simple_api_nombre_certificado, 'rb'), 'application/x-pkcs12')),
+                ('files', (compañia.simple_api_nombre_certificado, open(compañia.simple_api_ruta_certificado+compañia.simple_api_nombre_certificado, 'rb'), 'application/x-pkcs12')),
                 ('files', (nombre_caf, open(ruta_completa_caf, 'rb'), 'text/xml'))
             ]            
 
