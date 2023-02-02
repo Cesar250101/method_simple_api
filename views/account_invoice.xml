@@ -1,17 +1,27 @@
 <odoo>
   <data>
+  
+    <record id="method_simple_api.account_invoice_form" model="ir.ui.view">
+      <field name="name">method.simple.api.account.invoice.form</field>
+      <field name="model">account.invoice</field>
+      <field name="inherit_id" ref="account.invoice_form"/>
+      <field name="arch" type="xml">      
+        <xpath expr="//sheet/group/group/field[@name='partner_id']" position="after">            
+          <field name="pais_id" attrs="{'invisible':[('sii_code', '!=', 110)],'required': [('sii_code', '=', 110)],}"/>
+        </xpath>        
+      </field>
+    </record>
+
 
     <!-- Facturas de venta -->
     <record id="method_simple_api.view_invoice_form" model="ir.ui.view">
       <field name="name">method.simple.api.view.invoice.form</field>
       <field name="model">account.invoice</field>
       <field name="inherit_id" ref="l10n_cl_fe.view_invoice_form"/>
-      <field name="arch" type="xml">
-      
-            <xpath expr="//notebook/page[3]/group/field[@name='sii_xml_request']" position="before">            
-              <field name="sii_track_id"/>
-            </xpath>
-        
+      <field name="arch" type="xml">      
+        <xpath expr="//notebook/page[3]/group/field[@name='sii_xml_request']" position="before">            
+          <field name="sii_track_id"/>
+        </xpath>        
       </field>
     </record>
 
@@ -21,12 +31,10 @@
       <field name="name">method.simple.api.view.supplier.invoice.form</field>
       <field name="model">account.invoice</field>
       <field name="inherit_id" ref="l10n_cl_fe.view_supplier_invoice_form"/>
-      <field name="arch" type="xml">
-      
+      <field name="arch" type="xml">      
             <xpath expr="//field[@name='sii_xml_request']" position="before">            
               <field name="sii_track_id"/>
             </xpath>
-        
       </field>
     </record>
 

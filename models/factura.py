@@ -15,6 +15,7 @@ class AccountInvoice(models.Model):
     _inherit = 'account.invoice'
 
     sii_track_id = fields.Integer('ID Envío')
+    pais_id = fields.Many2one(comodel_name='res.country', string='País')
 
     @api.multi
     def invoice_validate(self):
@@ -205,11 +206,11 @@ class AccountInvoice(models.Model):
                         "Receptor": {
                             "Rut": '55555555-5',
                             "RazonSocial": self.partner_id.name,
-                            "Direccion": self.partner_id.street,
-                            "Comuna": self.partner_id.city_id.name,
-                            "Giro": self.partner_id.activity_description.name,
+                            "Direccion": self.partner_id.street if self.partner_id.street else compañia.partner_id.street,
+                            "Comuna": self.partner_id.city_id.name if self.partner_id.city_id.name else compañia.partner_id.city_id.name,
+                            "Giro": self.partner_id.activity_description.name if self.partner_id.activity_description.name else compañia.partner_id.activity_description.name,
                             "Extranjero":{
-                            "Nacionalidad":self.partner_id.country_id.vat_label
+                            "Nacionalidad":self.partner_id.country_id.vat_label if self.partner_id.country_id.vat_label else 'Chile'
                             }
                         },
 
