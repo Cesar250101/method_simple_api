@@ -276,7 +276,7 @@ class AccountInvoice(models.Model):
 #Actualiza secuencia
                 secuencia=self.env['ir.sequence'].search([('sii_document_class_id','=',self.document_class_id.id)])
                 secuencia.write({
-                                    'number_next_actual':folio
+                                    'number_next_actual':folio+1
                                 })
             else:
                 raise UserError("Ocurrio un error al enviar el documento al SII, la razón es {}".format(dict_text['responseXml']))
