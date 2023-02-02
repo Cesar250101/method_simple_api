@@ -210,7 +210,7 @@ class AccountInvoice(models.Model):
                             "Comuna": self.partner_id.city_id.name if self.partner_id.city_id.name else compañia.partner_id.city_id.name,
                             "Giro": self.partner_id.activity_description.name if self.partner_id.activity_description.name else compañia.partner_id.activity_description.name,
                             "Extranjero":{
-                            "Nacionalidad":self.partner_id.country_id.vat_label if self.partner_id.country_id.vat_label else 'Chile'
+                            "Nacionalidad":self.pais_id.name if self.pais_id else 'Chile'
                             }
                         },
 
