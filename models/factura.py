@@ -260,7 +260,8 @@ class AccountInvoice(models.Model):
                             'invoice_ids': [[6,0, self.ids]],
                         })      
                 self.write({
-                    'state':'open'
+                    'state':'open',
+                    'sii_track_id':dict_text['trackId']
                 })
                 tree = ET.parse(response[1])
                 root = tree.getroot()
