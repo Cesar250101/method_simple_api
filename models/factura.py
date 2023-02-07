@@ -14,7 +14,7 @@ from odoo.exceptions import UserError
 class AccountInvoice(models.Model):
     _inherit = 'account.invoice'
 
-    sii_track_id = fields.Integer('ID Envío')
+    sii_track_id = fields.Char('ID Envío')
     pais_id = fields.Many2one(comodel_name='res.country', string='País')
 
     @api.multi
