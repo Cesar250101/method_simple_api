@@ -225,8 +225,8 @@ class AccountInvoice(models.Model):
 
                         "Totales":{
                             "TipoMoneda":"DOLAR_ESTADOUNIDENSE",
-                            "MontoExento":self.amount_total,
-                            "MontoTotal":self.amount_total
+                            "MontoExento":round(self.amount_total,0) ,
+                            "MontoTotal":round(self.amount_total,0)
                         },
                         "OtraMoneda":{
                             "TipoMoneda":"PESO_CHILENO",
