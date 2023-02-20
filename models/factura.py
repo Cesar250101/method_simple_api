@@ -110,11 +110,14 @@ class AccountInvoice(models.Model):
             ('journal_id','=',self.journal_id.id),
             ('sii_document_number','!=',False)
             ]
-            if self.sii_document_number==0 or self.sii_document_number==False:
-                folio=self.env['account.invoice'].search(domain,order="sii_document_number desc", limit=1).sii_document_number
-                folio+=1
-            else:
-                folio=self.sii_document_number
+            # if self.sii_document_number==0 or self.sii_document_number==False:
+            #     folio=self.env['account.invoice'].search(domain,order="sii_document_number desc", limit=1).sii_document_number
+            #     folio+=1
+            # else:
+            #     folio=self.sii_document_number
+            folio=self.env['account.invoice'].search(domain,order="sii_document_number desc", limit=1).sii_document_number
+            folio+=1
+
             codigos_actividad=[]
             for a in self._obtener_acteco():
                 codigos_actividad.append(a[0])
@@ -239,7 +242,9 @@ class AccountInvoice(models.Model):
                     # "DescuentosRecargos":self._obtener_DR(),
                 },
                 }
-                payload["Certificado"]=self._get_certificado(compañia)      
+                print(payload)
+                payload["Certificado"]=self._get_certificado(compañia)    
+                  
                 files=self._firmar_Timbrar_xml(payload,compañia)            
                 response = self.generar_xml_dte(files,folio)
                 sobre=self.generar_sobre_envio(response[1],compañia,folio,receptor='60803000-K')
