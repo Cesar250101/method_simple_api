@@ -27,7 +27,8 @@
         'views/compañia.xml',
         'views/templates.xml',
         'views/account_invoice.xml',
-        'views/res_country.xml'
+        'views/res_country.xml',
+        'data/cron.xml',
     ],
     # only loaded in demonstration mode
     'demo': [
