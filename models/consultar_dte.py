@@ -60,7 +60,7 @@ class CoonsultarEstadoFactura(models.Model):
         "Certificado": _model_invoice._get_certificado(compañia),
         }    
         url = compañia.simple_api_servidor+"/api/v1/consulta/envio"
-        invoices=self.env['pos.order'].search([('sii_result','in',['Enviado','EnCola','Aceptado'])],limit=20)
+        invoices=self.env['pos.order'].search([('sii_result','in',['Enviado','EnCola','Aceptado'])],limit=50)
         for i in invoices:
             payload["RutEmpresa"]= compañia.partner_id.document_number.replace('.','')
             payload["TrackId"]= i.sii_xml_request.sii_send_ident
