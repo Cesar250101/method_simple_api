@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data>
-    
-        <!--Actualizar Stock a Jumpseller-->
+    <data>    
+        <!--Consulta estado de factura-->
         <record id="method_simple_api.ir_cron_consulta_estado_envio" model="ir.cron">
             <field name="name">SimpleApi - Consultar estado de envío</field>
             <field name="interval_number">1</field>
@@ -11,6 +10,17 @@
             <field name="model_id" ref="account.model_account_invoice"/>
             <field name="state">code</field>
             <field name="code">model.consultar_estado()</field>
+            <field name="active" eval="True" />
+        </record>      
+        <!--Consulta estado de boletas-->
+        <record id="method_simple_api.ir_cron_consulta_estado_envio_boleta" model="ir.cron">
+            <field name="name">SimpleApi - Consultar estado de envío de Boletas</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">hours</field>
+            <field name="numbercall">-1</field>
+            <field name="model_id" ref="point_of_sale.model_pos_order"/>
+            <field name="state">code</field>
+            <field name="code">model.consultar_estado_boleta()</field>
             <field name="active" eval="True" />
         </record>      
 
