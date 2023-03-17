@@ -16,12 +16,12 @@ class CoonsultarEstadoFactura(models.Model):
         "Certificado": self._get_certificado(compañia),
         }    
         url = compañia.simple_api_servidor+"/api/v1/consulta/envio"
-        invoices=self.env['account.invoice'].search([('sii_result','in',['Enviado','EnCola','Enviado','Aceptado'])])
+        invoices=self.env['account.invoice'].search([('sii_result','in',['Enviado','EnCola','NoEnviado','Aceptado'])])
         for i in invoices:
             payload["RutEmpresa"]= compañia.partner_id.document_number.replace('.','')
-            payload["TrackId"]= i.sii_track_id if i.sii_track_id!=False else self.sii_xml_request.sii_send_ident
+            payload["TrackId"]= i.sii_track_id if i.sii_track_id!=False else i.sii_xml_request.sii_send_ident
             payload["Ambiente"]= 0 if compañia.dte_service_provider=='SIICERT' else 1 
-            payload["ServidorBoletaREST"]=True if self.sii_code==39 else False
+            payload["ServidorBoletaREST"]=True if i.sii_code==39 else False
 
             files = [
                 ('input', ('', json.dumps(payload), 'application/json')),
