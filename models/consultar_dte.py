@@ -48,7 +48,7 @@ class CoonsultarEstadoFactura(models.Model):
                 
                 i.sii_message=datos_diccionario['responseXml']
 
-class CoonsultarEstadoFactura(models.Model):
+class CoonsultarEstadoBoleta(models.Model):
     _inherit = 'pos.order'
 
     
