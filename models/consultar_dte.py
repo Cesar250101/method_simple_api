@@ -46,8 +46,8 @@ class CoonsultarEstadoFactura(models.Model):
                         i.sii_result='Aceptado'
                     elif datos_diccionario['estado'] in['PDR']:
                         i.sii_result='Enviado'
-                    
-                    i.sii_message=datos_diccionario['responseXml']
+                    if 'responseXml' in datos_diccionario:
+                        i.sii_message=datos_diccionario['responseXml']
 
 class CoonsultarEstadoBoleta(models.Model):
     _inherit = 'pos.order'
