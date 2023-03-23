@@ -16,7 +16,7 @@ class CoonsultarEstadoFactura(models.Model):
         "Certificado": self._get_certificado(compañia),
         }    
         url = compañia.simple_api_servidor+"/api/v1/consulta/envio"
-        invoices=self.env['account.invoice'].search([('sii_result','in',['Enviado','EnCola','NoEnviado','Aceptado'])])
+        invoices=self.env['account.invoice'].search([('sii_result','in',['Enviado','EnCola','NoEnviado','Aceptado'])],limit=50)
         for i in invoices:
             if i.journal_id.type=='sale':
                 payload["RutEmpresa"]= compañia.partner_id.document_number.replace('.','')
