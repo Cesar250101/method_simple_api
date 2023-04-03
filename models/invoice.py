@@ -20,7 +20,7 @@ class AccountInvoice(models.Model):
     @api.multi
     def invoice_validate(self):
         factura=self._generar_xml()
-        if self.document_class_id.sii_code not in(46,110):
+        if self.document_class_id.sii_code not in(46,110,112):
             return super(AccountInvoice, self).invoice_validate()        
 
 
@@ -86,8 +86,8 @@ class AccountInvoice(models.Model):
             referencias={}
             for l in self.referencias:
                 referencia={
-                    "FechaDocumentoReferencia": l.fecha_documento,
-                    "TipoDocumento": l.sii_referencia_TpoDocRef,
+                    "FechaDocumentoReferencia": l.fecha_documento.isoformat(),
+                    "TipoDocumento": l.sii_referencia_TpoDocRef.sii_code,
                     "CodigoReferencia": l.sii_referencia_CodRef,
                     "RazonReferencia": l.motivo,
                     "FolioReferencia": l.origen
@@ -101,22 +101,22 @@ class AccountInvoice(models.Model):
 
     @api.one
     def _generar_xml(self):
-        if self.document_class_id.sii_code in(46,110):
+        if self.document_class_id.sii_code in(46,110,112):
             compañia=self.env.user.company_id
             ruta_certificado=compañia.simple_api_ruta_certificado
     #Obtiene folios desde la clase de documentos        
             journal_document_class_id=self.env['account.journal.sii_document_class'].search([('sii_document_class_id','=',self.document_class_id.id)])         
+
             domain=[('sii_code','=',self.document_class_id.sii_code),
             ('journal_id','=',self.journal_id.id),
-            ('sii_document_number','!=',False)
+            ('sii_document_number','!=',False),
+            ('id','!=',self.id),            
             ]
-            # if self.sii_document_number==0 or self.sii_document_number==False:
-            #     folio=self.env['account.invoice'].search(domain,order="sii_document_number desc", limit=1).sii_document_number
-            #     folio+=1
-            # else:
-            #     folio=self.sii_document_number
-            folio=self.env['account.invoice'].search(domain,order="sii_document_number desc", limit=1).sii_document_number
-            folio+=1
+            if self.sii_document_number==0 or self.sii_document_number==False:
+                folio=self.env['account.invoice'].search(domain,order="sii_document_number desc", limit=1).sii_document_number
+                folio+=1
+            else:
+                folio=self.sii_document_number
 
             codigos_actividad=[]
             for a in self._obtener_acteco():
@@ -184,7 +184,7 @@ class AccountInvoice(models.Model):
                 response = self.generar_xml_dte(files,folio)
                 sobre=self.generar_sobre_envio(response[1],compañia,folio,receptor='60803000-K')
                 envio=self.enviar_sobre_envio(sobre[1],compañia,tipo=1)
-            elif self.document_class_id.sii_code==110:
+            elif self.document_class_id.sii_code in(110,112):
                 payload={
                 "Exportaciones":{
                     "Encabezado":{
@@ -242,9 +242,18 @@ class AccountInvoice(models.Model):
                     # "DescuentosRecargos":self._obtener_DR(),
                 },
                 }
-                print(payload)
+                
                 payload["Certificado"]=self._get_certificado(compañia)    
-                  
+
+    #Agrega las referencias del documento            
+                if self.referencias:
+                    payload["Referencias"]=self._obtener_referencias()
+                if self.global_descuentos_recargos:
+                    payload["DescuentosRecargos"]=self._obtener_DR()
+
+                print(payload)
+                json_payload=json.dumps(payload)
+                                  
                 files=self._firmar_Timbrar_xml(payload,compañia)            
                 response = self.generar_xml_dte(files,folio)
                 sobre=self.generar_sobre_envio(response[1],compañia,folio,receptor='60803000-K')
@@ -271,9 +280,11 @@ class AccountInvoice(models.Model):
                     'state':'open',
                     'sii_track_id':dict_text['trackId']
                 })
+
                 tree = ET.parse(response[1])
+
                 root = tree.getroot()
-                if self.document_class_id.sii_code!=110:      
+                if self.document_class_id.sii_code not in(110,112):      
                     tag = root.find("Documento")  
                 else:
                     tag = root.find("Exportaciones")  
@@ -422,7 +433,7 @@ class AccountInvoice(models.Model):
     @api.model
     def _firmar_Timbrar_xml(self,payload,compañia):
         caf=self.env['dte.caf'].search([('sii_document_class','=',self.document_class_id.sii_code)])
-        archivo_caf=caf.obtener_caf()
+        archivo_caf=caf.obtener_caf(self.sii_document_number)
         print(archivo_caf)
         nombre_caf=archivo_caf[0]['name']
         ruta_completa_caf=compañia.simple_api_ruta_caf+nombre_caf

@@ -11,8 +11,8 @@ class Company(models.Model):
     _inherit = 'dte.caf'
 
     @api.one
-    def obtener_caf(self):
-        next_number=self.sequence_id.next_by_id()
+    def obtener_caf(self,folio=0):
+        next_number=folio
         today = str(date.today())
         domain=[
             ('sii_document_class','=',self.sii_document_class),
