@@ -434,10 +434,8 @@ class AccountInvoice(models.Model):
     def _firmar_Timbrar_xml(self,payload,compañia):
         caf=self.env['dte.caf'].search([('sii_document_class','=',self.document_class_id.sii_code)])
         archivo_caf=caf.obtener_caf(self.sii_document_number)
-        print(archivo_caf)
         nombre_caf=archivo_caf[0]['name']
         ruta_completa_caf=compañia.simple_api_ruta_caf+nombre_caf
-        print(payload)
         files = [
                 ('input', ('', json.dumps(payload), 'application/json')),
                 ('files', (compañia.simple_api_nombre_certificado, open(compañia.simple_api_ruta_certificado+compañia.simple_api_nombre_certificado, 'rb'), 'application/x-pkcs12')),

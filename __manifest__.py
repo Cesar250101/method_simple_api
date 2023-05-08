@@ -29,6 +29,7 @@
         'views/account_invoice.xml',
         'views/res_country.xml',
         'data/cron.xml',
+        'wizard/apicaf.xml'
     ],
     # only loaded in demonstration mode
     'demo': [

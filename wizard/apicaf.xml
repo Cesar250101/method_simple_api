@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <record id="method_simple_api.view_dte_caf_apicaf" model="ir.ui.view">
+      <field name="name">method.simple.api.view_dte.caf.apicaf</field>
+      <field name="model">dte.caf.apicaf</field>
+      <field name="inherit_id" ref="l10n_cl_fe.view_dte_caf_apicaf"/>
+      <field name="arch" type="xml">
+            <xpath expr="//field[@name='cant_doctos']" position="replace">   
+                <!-- <field name="cant_doctos" attrs="{'invisible': [('cod_docto', '=', False)]}"/> -->
+                <field name="cant_doctos"/>
+            </xpath>
+            <!-- <xpath expr="//field[@name='firma']" position="replace">   
+                <field name="firma" attrs="{'invisible': [(True, '=', True)]}"/>
+            </xpath>         -->
+      </field>
+    </record>
+
+</odoo>

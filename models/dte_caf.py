@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import json
+import requests
 from odoo import models, fields, api
 from http.client import HTTPSConnection
 from base64 import b64encode
@@ -22,3 +24,39 @@ class Company(models.Model):
         ]
         archivo_caf=self.search(domain,order="expiration_date")
         return archivo_caf
+
+class APICAFDocs(models.TransientModel):
+    _inherit = "dte.caf.apicaf.docs"
+
+
+class APICAF(models.TransientModel):
+    _inherit = "dte.caf.apicaf"
+
+
+    @api.onchange('company_id')
+    def get_caf(self):
+        compañia=self.env.user.company_id
+        headers = {
+                #'Authorization': 'Basic bWV0aG9kOjIwMTA2MjZBYg==',
+                'Authorization': compañia.simple_api_token,
+            }        
+        url = compañia.simple_api_servidor+':5000'+"/api/folios/get/"+str(self.cod_docto.sii_code)
+        file=compañia._certificar(compañia)
+        datos={
+                            "RutCertificado":compañia.simple_api_rut_certificado,
+                            "Password":compañia.simple_api_password_certificado,
+                            "RutEmpresa":compañia.partner_id.document_number.replace('.',''),
+                            "Ambiente":0 if compañia.dte_service_provider=='SIICERT' else 1           
+            
+                }
+        payload={
+                "input":str(datos) }
+        
+        json_payload=json.dumps(payload)
+        print(json_payload)
+        json_payload=json.loads(json_payload)
+        print(json_payload)
+        response = requests.request("GET", url, headers=headers, data=json_payload, files=file)        
+        if response.status_code==200:
+            self.cant_doctos=response.text
+

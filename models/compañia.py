@@ -18,7 +18,21 @@ class Company(models.Model):
     simple_api_ruta_dte = fields.Char('Ruta Dte',placeholder='c:\directorio')
     simple_api_ruta_caf = fields.Char('Ruta CAF',placeholder='c:\directorio')
 
+    @api.model
+    def _certificar(self,compañia):
+        files = [
+                ('files', (compañia.simple_api_nombre_certificado, open(compañia.simple_api_ruta_certificado+'\\'+compañia.simple_api_nombre_certificado, 'rb'), 'application/x-pkcs12')),
+            ]            
 
+        return files  
+
+    @api.model
+    def _get_certificado(self,compañia):
+        certificado={
+                    "Rut": compañia.simple_api_rut_certificado,
+                    "Password": compañia.simple_api_password_certificado
+                }    
+        return certificado   
 
     def basic_auth(self):
         token = b64encode(f"{self.simple_api_usuario}:{self.simple_api_password}".encode('utf-8')).decode("ascii")
