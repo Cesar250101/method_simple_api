@@ -41,6 +41,46 @@ class AccountInvoice(models.Model):
             codigos.append(c.code)
         return codigos
 
+
+    @api.one
+    def _transporte(self):
+        aduana={}
+        TipoBultos=[]
+        for t in self.bultos:
+            TipoBultos.append(
+                                {
+                                    "CodigoTipoBulto":t.tipo_bulto.code,
+                                    "CantidadBultos":t.cantidad_bultos,
+                                    "IdContainer":t.id_container,
+                                    "Sello":t.sello,
+                                    "EmisorSello":t.emisor_sello
+                                }
+                            )
+
+        aduana={
+                    "CodigoModalidadVenta":self.payment_term_id.modalidad_venta.code,
+                    "CodigoClausulaVenta":self.clausula_venta.code,
+                    "TotalClausulaVenta":self.amount_total,
+                    "CodigoViaTransporte":self.via.code,
+                    "CodigoPuertoEmbarque":self.puerto_embarque.code,
+                    "CodigoPuertoDesembarque":self.puerto_desembarque.code,
+                    "Tara":self.tara,
+                    "CodigoUnidadMedidaTara":self.uom_tara.code,
+                    "PesoBruto":self.peso_bruto,
+                    "CodigoUnidadPesoBruto":self.uom_peso_bruto.code,
+                    "PesoNeto":self.peso_neto,
+                    "CodigoUnidadPesoNeto":self.uom_peso_bruto.code,
+                    "CantidadBultos":self.total_bultos,
+                    "TipoBultos":TipoBultos,
+                    "MontoFlete":self.monto_flete,
+                    "MontoSeguro":self.monto_seguro,
+                    "CodigoPaisReceptor":self.pais_id.code_dte,
+                    "CodigoPaisDestino":self.pais_destino.code
+                }
+        aduana.update(aduana)
+        return aduana
+
+
     @api.one
     def _obtener_lineas(self):
         detalle={}
@@ -78,7 +118,7 @@ class AccountInvoice(models.Model):
 
             return drs
         else:
-            return None
+            return []
 
     @api.model
     def _obtener_referencias(self):
@@ -161,7 +201,6 @@ class AccountInvoice(models.Model):
                         }
                     },
                     "Detalles":self._obtener_lineas(),
-                
                 },
 
                 # payload["Certificado"]=self._get_certificado(compañia)
@@ -206,7 +245,7 @@ class AccountInvoice(models.Model):
                             "ActividadEconomica": codigos_actividad,
                             "DireccionOrigen": compañia.partner_id.street,
                             "ComunaOrigen": compañia.partner_id.city_id.name,
-                            "Telefono": [compañia.partner_id.phone if compañia.partner_id.phone else None]
+                            "Telefono": [compañia.partner_id.phone if compañia.partner_id.phone else 0]
                         },
 
                         "Receptor": {
@@ -219,13 +258,8 @@ class AccountInvoice(models.Model):
                             "Nacionalidad":self.pais_id.code_dte if self.pais_id else '997'
                             }
                         },
-
-                        "Transporte":{
-                            "Aduana":{
-                                "CodigoModalidadVenta":self.payment_term_id.modalidad_venta.code
-                            }
-                        },
-
+                        "Transporte":{"Aduana":self._transporte()[0]},                    
+                        
                         "Totales":{
                             "TipoMoneda":"DOLAR_ESTADOUNIDENSE",
                             "MontoExento":round(self.amount_total,0) ,
@@ -239,7 +273,7 @@ class AccountInvoice(models.Model):
                         }
                     },
                     "Detalles":self._obtener_lineas(),
-                    # "DescuentosRecargos":self._obtener_DR(),
+                    "DescuentosRecargos":self._obtener_DR(),
                 },
                 }
                 
@@ -248,13 +282,14 @@ class AccountInvoice(models.Model):
     #Agrega las referencias del documento            
                 if self.referencias:
                     payload["Referencias"]=self._obtener_referencias()
-                if self.global_descuentos_recargos:
-                    payload["DescuentosRecargos"]=self._obtener_DR()
+                # if self.global_descuentos_recargos:
+                #     payload["DescuentosRecargos"]=self._obtener_DR()
 
-                print(payload)
-                json_payload=json.dumps(payload)
-                                  
-                files=self._firmar_Timbrar_xml(payload,compañia)            
+                
+                json_payload=json.dumps(payload)     
+
+                print(json_payload)
+                files=self._firmar_Timbrar_xml(payload,compañia)   
                 response = self.generar_xml_dte(files,folio)
                 sobre=self.generar_sobre_envio(response[1],compañia,folio,receptor='60803000-K')
                 envio=self.enviar_sobre_envio(sobre[1],compañia,tipo=1)
@@ -438,8 +473,9 @@ class AccountInvoice(models.Model):
         ruta_completa_caf=compañia.simple_api_ruta_caf+nombre_caf
         files = [
                 ('input', ('', json.dumps(payload), 'application/json')),
+                # ('input', (json.dumps(payload), 'application/json')),
                 ('files', (compañia.simple_api_nombre_certificado, open(compañia.simple_api_ruta_certificado+compañia.simple_api_nombre_certificado, 'rb'), 'application/x-pkcs12')),
-                ('files', (nombre_caf, open(ruta_completa_caf, 'rb'), 'text/xml'))
+                ('files', (nombre_caf, open(ruta_completa_caf, 'rb'), 'text/xml')),
             ]            
 
         return files
