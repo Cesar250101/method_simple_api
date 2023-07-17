@@ -19,7 +19,7 @@
     'version': '0.1',
 
     # any module necessary for this one to work correctly
-    'depends': ['base','account','l10n_cl_fe','base_currency_inverse_rate','method_minori'],
+    'depends': ['base','account','l10n_cl_fe','base_currency_inverse_rate'],
 
     # always loaded
     'data': [
