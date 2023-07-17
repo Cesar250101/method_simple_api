@@ -1,6 +1,36 @@
 <odoo>
   <data>
-  
+  <!-- Facturas de proveedor -->
+    <record id="method_simple_api.invoice_supplier_form" model="ir.ui.view">
+      <field name="name">method.simple.api.invoice.supplier.form</field>
+      <field name="model">account.invoice</field>
+      <field name="inherit_id" ref="account.invoice_supplier_form"/>
+      <field name="arch" type="xml">      
+        <xpath expr="//page[@name='other_info']" position="after">
+          <page name="comisiones" string="Comisiones"  attrs="{'invisible':[('use_documents', '=', False)]}">
+            <group>
+                <group name="liquidación" string="Liquidación de facturas">
+                  <field name="fecha_inicial_liq"/>
+                  <field name="fecha_final_liq"/>
+                  <field name="marca_id"/>
+                  <field name="neto_marca"/>
+                  <field name="iva_marca"/>
+                  <field name="total_marca"/>   
+                  <button name="agregar_linea_liquidación" string="Agregar Líneas" type="object"/>                                 
+                </group>
+                <group name="comision" string="Cálculo Comisión">
+                  <field name="porc_comision"/>
+                  <field name="neto_comision"/>
+                  <field name="iva_comision"/>
+                  <field name="total_comision"/>
+                </group>
+              
+            </group>
+          </page>
+        </xpath>   
+      </field>
+    </record>
+
     <record id="method_simple_api.account_invoice_form" model="ir.ui.view">
       <field name="name">method.simple.api.account.invoice.form</field>
       <field name="model">account.invoice</field>
@@ -9,6 +39,15 @@
         <xpath expr="//sheet/group/group/field[@name='partner_id']" position="after">            
           <field name="pais_id" attrs="{'invisible':[('sii_code', '!=', 110)],'required': [('sii_code', '=', 110)],}"/>
         </xpath>        
+        <xpath expr="//field[@name='payment_term_id']" position="after">            
+          <field name="tiene_code_qbli" help="El código QBLI se utiliza normalement por las empresas que utilizan SAP para efectos de indicar el item de la orden de compra que se está facturando."/>
+        </xpath>        
+        <xpath expr="/form/sheet/notebook/page[1]/field[1]/tree/field[@name='product_id']" position="after">
+          <field name="tiene_code_qbli" invisible="1"/>
+          <field name="code_qbli" attrs="{'invisible':[('tiene_code_qbli', '=', False)],'required': [('tiene_code_qbli', '=', True)]}"/>
+        </xpath>        
+
+
       </field>
     </record>
 

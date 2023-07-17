@@ -19,7 +19,7 @@
     'version': '0.1',
 
     # any module necessary for this one to work correctly
-    'depends': ['base','account','l10n_cl_fe','base_currency_inverse_rate'],
+    'depends': ['base','account','l10n_cl_fe','base_currency_inverse_rate','method_minori'],
 
     # always loaded
     'data': [
@@ -27,6 +27,7 @@
         'views/compañia.xml',
         'views/templates.xml',
         'views/account_invoice.xml',
+        'views/product_template.xml',
         'views/res_country.xml',
         'data/cron.xml',
         'wizard/apicaf.xml'

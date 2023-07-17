@@ -9,18 +9,124 @@ import shutil
 import codecs
 import pdf417gen
 import xml.etree.ElementTree as ET
-from odoo.exceptions import UserError
+from datetime import datetime
+from odoo.exceptions import AccessError, UserError, RedirectWarning, ValidationError, Warning
+
+class AccountInvoice(models.Model):
+    _inherit = 'account.invoice.line'
+
+    tiene_code_qbli = fields.Boolean(string='Agregar QBLI?',related='invoice_id.tiene_code_qbli')
+    code_qbli = fields.Char(string='Código QBLI')
+
 
 class AccountInvoice(models.Model):
     _inherit = 'account.invoice'
 
     sii_track_id = fields.Char('ID Envío')
     pais_id = fields.Many2one(comodel_name='res.country', string='País')
+    tiene_code_qbli = fields.Boolean(string='Agregar QBLI?')
+    fecha_inicial_liq = fields.Datetime(string='Fecha Inicial')
+    fecha_final_liq = fields.Datetime(string='Fecha Final')
+    marca_id = fields.Many2one(comodel_name='method_minori.marcas', string='Marca')
+    neto_marca = fields.Integer(compute='_compute_totales_marca', string='Neto Marca')
+    iva_marca = fields.Integer(compute='_compute_totales_marca', string='Iva Marca')
+    total_marca = fields.Integer(compute='_compute_totales_marca', string='Total Marca')
+    porc_comision = fields.Float(string='% Comisión')
+    neto_comision=fields.Integer(string='Neto Comisión',compute='_compute_comision')
+    iva_comision=fields.Integer(string='Iva Comisión',compute='_compute_comision')
+    total_comision=fields.Integer(string='Total Comisión',compute='_compute_comision')
+
+    
+    @api.one
+    def agregar_linea_liquidación(self):
+        product_tmpl_id=self.env['product.template'].search([('para_liquidacion','=',True)],limit=1)        
+        if product_tmpl_id:
+            invoice_line=self.env['account.invoice.line']
+            product_id=self.env['product.product'].search([('product_tmpl_id','=',product_tmpl_id.id)],limit=1)        
+            vals={
+                'product_id':product_id.id,
+                'name':product_tmpl_id.name,
+                'account_id':product_tmpl_id.categ_id.property_account_expense_categ_id.id,
+                'quantity':1,
+                'uom_id':product_tmpl_id.uom_po_id.id,
+                'price_unit':self.neto_marca,
+                'invoice_line_tax_ids':[(6, 0, [product_tmpl_id.supplier_taxes_id.id])]             ,                    
+                'invoice_id':self.id,
+            }
+            linea=invoice_line.create(vals)
+            linea._compute_price()
+            linea._get_price_tax()
+            linea._set_taxes()
+            self.write({
+                'amount_untaxed':self.neto_marca,
+                'amount_tax':self.iva_marca,
+                'amount_total':self.total_marca
+
+            })
+            self._compute_amount()    
+            self._compute_sign_taxes()        
+
+        else:
+            raise Warning("No ha definido un producto para liquidar facturas, vaya al productos y marque la opción!")            
+
+
+    @api.depends('porc_comision')
+    def _compute_comision(self):
+        if self.porc_comision and self.neto_marca:
+            neto_comision=round((self.neto_marca*(self.porc_comision/100)),0)
+            iva_comision=round(neto_comision*0.19,0)
+            total_comision=neto_comision+iva_comision
+            self.neto_comision=neto_comision
+            self.iva_comision=iva_comision
+            self.total_comision=total_comision
+
+    @api.depends('fecha_inicial_liq','fecha_final_liq','marca_id')
+    def _compute_totales_marca(self):
+        if self.fecha_final_liq and self.fecha_inicial_liq and self.marca_id:
+            query="""
+                        SELECT 
+                        sum(pol.price_subtotal)
+                        from pos_order po left join sii_document_class sdc on po.document_class_id =sdc.id
+                        inner join pos_order_line pol on po.id =pol.order_id 
+                        inner join product_product pp on pol.product_id =pp.id
+                        inner join product_template pt on pp.product_tmpl_id =pt.id  
+                        left join res_partner rp on po.partner_id =rp.id
+                        left join method_minori_marcas mmm on pt.marca_id =mmm.id
+                        left join product_category pc on pt.categ_id =pc.id 
+                        left join pos_session ps on po.session_id =ps.id 
+                        left join pos_config pc2 on ps.config_id =pc2.id
+                        where date_order between %s and %s
+                        and mmm.id =%s
+                        union 
+                        SELECT 
+                        sum(pol.price_subtotal) as neto
+                        from account_invoice po left join sii_document_class sdc on po.document_class_id =sdc.id
+                        inner join account_invoice_line pol on po.id =pol.invoice_id 
+                        inner join product_product pp on pol.product_id =pp.id
+                        inner join product_template pt on pp.product_tmpl_id =pt.id  
+                        left join res_partner rp on po.partner_id =rp.id
+                        left join method_minori_marcas mmm on pt.marca_id =mmm.id
+                        left join product_category pc on pt.categ_id =pc.id
+                        where po.date_invoice between %s and %s
+                        and mmm.id =%s
+                    """ 
+            self.env.cr.execute(query,[
+                                        self.fecha_inicial_liq.strftime("%Y-%m-%d %H:%M:%S"), self.fecha_final_liq.strftime("%Y-%m-%d %H:%M:%S"), self.marca_id.id,
+                                        self.fecha_inicial_liq.strftime("%Y-%m-%d %H:%M:%S"), self.fecha_final_liq.strftime("%Y-%m-%d %H:%M:%S"), self.marca_id.id,
+                                        ])
+            rec=self.env.cr.fetchall()
+            neto=0
+            for r in rec:
+                neto+=r[0]
+            self.neto_marca=neto
+            self.iva_marca=round(neto*0.19,0)
+            self.total_marca=neto+round(neto*0.19,0)
+
 
     @api.multi
     def invoice_validate(self):
         factura=self._generar_xml()
-        if self.document_class_id.sii_code not in(46,110,112):
+        if self.document_class_id.sii_code not in(46,110,112,43):
             return super(AccountInvoice, self).invoice_validate()        
 
 
@@ -138,10 +244,75 @@ class AccountInvoice(models.Model):
         else:
             return None
 
+    @api.model
+    def _obtener_datos_liquidacion_factura(self,folio):
+        compañia=self.env.user.company_id
+        codigos_actividad=[]
+        for a in self._obtener_acteco():
+            codigos_actividad.append(a[0])
+        payload = {
+            "Liquidacion": {
+            "Encabezado": {
+                "IdentificacionDTE": {
+                    "TipoDTE": self.document_class_id.sii_code,
+                    "Folio":folio,
+                    "FechaEmision": self.date_invoice.isoformat(),
+                    "FechaVencimiento": self.date_due.isoformat(),
+                    "FormaPago": self.payment_term_id.dte_sii_code if self.payment_term_id.dte_sii_code else 1
+                },
+                "Emisor": {
+                    "Rut": compañia.partner_id.document_number.replace('.',''),
+                    "RazonSocial": compañia.partner_id.name,
+                    "Giro": compañia.partner_id.activity_description.name,
+                    "ActividadEconomica": codigos_actividad,
+                    "DireccionOrigen": compañia.partner_id.street,
+                    "ComunaOrigen": compañia.partner_id.city_id.name,
+                    "Telefono": [compañia.partner_id.phone if compañia.partner_id.phone else 0]
+
+                },
+                "Receptor": {
+                    "Rut": self.partner_id.document_number,
+                    "RazonSocial": self.partner_id.name,
+                    "Direccion": self.partner_id.street if self.partner_id.street else None,
+                    "Comuna": self.partner_id.city_id.name if self.partner_id.city_id.name else None,
+                    "Ciudad": self.partner_id.city if self.partner_id.city else None,
+                    "Giro": self.partner_id.activity_description.name if self.partner_id.activity_description.name else None,
+                    "Contacto": self.partner_id.mobile if self.partner_id.mobile else '',
+                    "CorreoElectronico": self.partner_id.email if self.partner_id.email else ''
+                },
+                "Totales": {
+                    "MontoNeto": self.amount_untaxed,
+                    "TasaIVA": 19,
+                    "IVA": self.amount_tax,
+                    "MontoTotal": self.amount_total,
+                    "Comisiones": [
+                        {
+                        "ValorNeto": self.neto_comision,
+                        "ValorExento": 0,
+                        "ValorIVA": self.iva_comision
+                        }
+                    ]
+                }
+            },
+            "Detalles":self._obtener_lineas(),
+            "Comisiones": [
+                {
+                    "TipoMovimiento": "Comisiones",
+                    "Glosa": "Comision",
+                    "Tasa": self.porc_comision,
+                    "ValorNeto": self.neto_comision,
+                    "ValorExento": 0,
+                    "ValorIVA": self.iva_comision
+                }
+            ]
+        }
+        }        
+        return payload
+
 
     @api.one
     def _generar_xml(self):
-        if self.document_class_id.sii_code in(46,110,112):
+        if self.document_class_id.sii_code in(46,110,112,43):
             compañia=self.env.user.company_id
             ruta_certificado=compañia.simple_api_ruta_certificado
     #Obtiene folios desde la clase de documentos        
@@ -152,7 +323,7 @@ class AccountInvoice(models.Model):
             ('sii_document_number','!=',False),
             ('id','!=',self.id),            
             ]
-            if self.sii_document_number==0 or self.sii_document_number==False:
+            if self.sii_document_number==0 and self.document_class_id.sii_code ==46:
                 folio=self.env['account.invoice'].search(domain,order="sii_document_number desc", limit=1).sii_document_number
                 folio+=1
             else:
@@ -162,7 +333,7 @@ class AccountInvoice(models.Model):
             for a in self._obtener_acteco():
                 codigos_actividad.append(a[0])
 
-            if self.use_documents and self.journal_id.type=='purchase': 
+            if self.use_documents and self.document_class_id.sii_code ==46: 
                 url = compañia.simple_api_servidor+"/api/v1/dte/generar"
                 payload={
                 "Documento": {
@@ -210,12 +381,13 @@ class AccountInvoice(models.Model):
                 #     "Password": compañia.simple_api_password_certificado
                 #                 }
                 }
-                payload["Certificado"]=self._get_certificado(compañia)            
+                # payload["Certificado"]=self._get_certificado(compañia)            
     #Agrega las referencias del documento            
                 if self.referencias:
                     payload["Referencias"]=self._obtener_referencias()
                 if self.global_descuentos_recargos:
                     payload["DescuentosRecargos"]=self._obtener_DR()
+
                 json_payload=json.dumps(payload)
 
     #Firma y timbre el XML            
@@ -223,59 +395,62 @@ class AccountInvoice(models.Model):
                 response = self.generar_xml_dte(files,folio)
                 sobre=self.generar_sobre_envio(response[1],compañia,folio,receptor='60803000-K')
                 envio=self.enviar_sobre_envio(sobre[1],compañia,tipo=1)
-            elif self.document_class_id.sii_code in(110,112):
-                payload={
-                "Exportaciones":{
-                    "Encabezado":{
-                        "IdentificacionDTE":{
-                            "TipoDTE":self.document_class_id.sii_code,
-                            "Folio":folio,
-                            "FechaEmision":self.date_invoice.isoformat(),
-                            "FechaVencimiento":self.date_due.isoformat(),
-                            "FormaPago":self.payment_term_id.dte_sii_code,
-                            "FormaPagoExportacion":self.payment_term_id.forma_pago_aduanas.code,
-                            "MedioPago":self.payment_term_id.modalidad_venta.code,
-                            "IndServicio":self.ind_servicio
-                        },
+            elif self.document_class_id.sii_code in(110,112,43):
+                if self.document_class_id.sii_code in(110,112):
+                    payload={
+                    "Exportaciones":{
+                        "Encabezado":{
+                            "IdentificacionDTE":{
+                                "TipoDTE":self.document_class_id.sii_code,
+                                "Folio":folio,
+                                "FechaEmision":self.date_invoice.isoformat(),
+                                "FechaVencimiento":self.date_due.isoformat(),
+                                "FormaPago":self.payment_term_id.dte_sii_code,
+                                "FormaPagoExportacion":self.payment_term_id.forma_pago_aduanas.code if self.document_class_id.sii_code in(110,112) else '',
+                                "MedioPago":self.payment_term_id.modalidad_venta.code if self.document_class_id.sii_code in(110,112) else '',
+                                "IndServicio":self.ind_servicio
+                            },
 
-                        "Emisor": {
-                            "Rut": compañia.partner_id.document_number.replace('.',''),
-                            "RazonSocial": compañia.partner_id.name,
-                            "Giro": compañia.partner_id.activity_description.name,
-                            "ActividadEconomica": codigos_actividad,
-                            "DireccionOrigen": compañia.partner_id.street,
-                            "ComunaOrigen": compañia.partner_id.city_id.name,
-                            "Telefono": [compañia.partner_id.phone if compañia.partner_id.phone else 0]
-                        },
+                            "Emisor": {
+                                "Rut": compañia.partner_id.document_number.replace('.',''),
+                                "RazonSocial": compañia.partner_id.name,
+                                "Giro": compañia.partner_id.activity_description.name,
+                                "ActividadEconomica": codigos_actividad,
+                                "DireccionOrigen": compañia.partner_id.street,
+                                "ComunaOrigen": compañia.partner_id.city_id.name,
+                                "Telefono": [compañia.partner_id.phone if compañia.partner_id.phone else 0]
+                            },
 
-                        "Receptor": {
-                            "Rut": '55555555-5',
-                            "RazonSocial": self.partner_id.name,
-                            "Direccion": self.partner_id.street if self.partner_id.street else compañia.partner_id.street,
-                            "Comuna": self.partner_id.city_id.name if self.partner_id.city_id.name else compañia.partner_id.city_id.name,
-                            "Giro": self.partner_id.activity_description.name if self.partner_id.activity_description.name else compañia.partner_id.activity_description.name,
-                            "Extranjero":{
-                            "Nacionalidad":self.pais_id.code_dte if self.pais_id else '997'
+                            "Receptor": {
+                                "Rut": '55555555-5',
+                                "RazonSocial": self.partner_id.name,
+                                "Direccion": self.partner_id.street if self.partner_id.street else compañia.partner_id.street,
+                                "Comuna": self.partner_id.city_id.name if self.partner_id.city_id.name else compañia.partner_id.city_id.name,
+                                "Giro": self.partner_id.activity_description.name if self.partner_id.activity_description.name else compañia.partner_id.activity_description.name,
+                                "Extranjero":{
+                                "Nacionalidad":self.pais_id.code_dte if self.pais_id else '997'
+                                }
+                            },
+                            "Transporte":{"Aduana":self._transporte()[0]},                    
+                            
+                            "Totales":{
+                                "TipoMoneda":"DOLAR_ESTADOUNIDENSE",
+                                "MontoExento":round(self.amount_total,0) ,
+                                "MontoTotal":round(self.amount_total,0)
+                            },
+                            "OtraMoneda":{
+                                "TipoMoneda":"PESO_CHILENO",
+                                "TipoCambio":self.currency_id.inverse_rate,
+                                "MontoExento":round(self.amount_total*self.currency_id.inverse_rate,0),
+                                "MontoTotal":round(self.amount_total*self.currency_id.inverse_rate,0) 
                             }
                         },
-                        "Transporte":{"Aduana":self._transporte()[0]},                    
-                        
-                        "Totales":{
-                            "TipoMoneda":"DOLAR_ESTADOUNIDENSE",
-                            "MontoExento":round(self.amount_total,0) ,
-                            "MontoTotal":round(self.amount_total,0)
-                        },
-                        "OtraMoneda":{
-                            "TipoMoneda":"PESO_CHILENO",
-                            "TipoCambio":self.currency_id.inverse_rate,
-                            "MontoExento":round(self.amount_total*self.currency_id.inverse_rate,0),
-                            "MontoTotal":round(self.amount_total*self.currency_id.inverse_rate,0) 
-                        }
+                        "Detalles":self._obtener_lineas(),
+                        "DescuentosRecargos":self._obtener_DR(),
                     },
-                    "Detalles":self._obtener_lineas(),
-                    "DescuentosRecargos":self._obtener_DR(),
-                },
-                }
+                    }
+                elif self.document_class_id.sii_code ==43:
+                    payload=self._obtener_datos_liquidacion_factura(folio,)
                 
                 payload["Certificado"]=self._get_certificado(compañia)    
 
@@ -284,11 +459,9 @@ class AccountInvoice(models.Model):
                     payload["Referencias"]=self._obtener_referencias()
                 # if self.global_descuentos_recargos:
                 #     payload["DescuentosRecargos"]=self._obtener_DR()
-
                 
                 json_payload=json.dumps(payload)     
 
-                print(json_payload)
                 files=self._firmar_Timbrar_xml(payload,compañia)   
                 response = self.generar_xml_dte(files,folio)
                 sobre=self.generar_sobre_envio(response[1],compañia,folio,receptor='60803000-K')
@@ -302,8 +475,14 @@ class AccountInvoice(models.Model):
                 self.sii_document_number=folio
 
                 nombre_archivo=self._obtener_nombre_xml(response[1])
-                with open(response[1], 'r') as f:
-                    dte_envio = f.read()
+                with open(response[1], 'r',encoding='utf-8',errors='ignore') as f:
+                    try:
+                        # text = f.decode('utf8')
+                        # dte_envio = text.read()
+                        dte_envio = f.read()
+                    except Exception as e:
+                        print(e)
+                    
 
                 if not self.sii_xml_request:
                     envio_id = self.env["sii.xml.envio"].create({
@@ -372,10 +551,14 @@ class AccountInvoice(models.Model):
         headers = {
                 #'Authorization': 'Basic bWV0aG9kOjIwMTA2MjZBYg==',
                 'Authorization': compañia.simple_api_token,
-            }        
-        url = compañia.simple_api_servidor+"/api/v1/dte/generar"
+            }
+        if self.document_class_id.sii_code !=43:
+            url = compañia.simple_api_servidor+"/api/v1/dte/generar"
+        else:
+            url=compañia.simple_api_servidor+"/api/v1/dte/liquidacion/generar"
 
         response = requests.post(url, headers=headers, files=files)
+        print(files[0][1][1])
         pathDTE = os.path.join(compañia.simple_api_ruta_dte,'DTE_'+str(self.document_class_id.sii_code)+'_'+compañia.partner_id.document_number.replace('.','')+'_'+str(folio)+'.xml' )
         with codecs.open(pathDTE,'w+',"ISO-8859-1") as f:            
             f.write(response.text)
