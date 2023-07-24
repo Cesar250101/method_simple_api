@@ -25,6 +25,7 @@ class AccountInvoice(models.Model):
     sii_track_id = fields.Char('ID Envío')
     pais_id = fields.Many2one(comodel_name='res.country', string='País')
     tiene_code_qbli = fields.Boolean(string='Agregar QBLI?')
+    calculo_liq_auto = fields.Boolean(string='Calculo Automátivo Comisión?')
     fecha_inicial_liq = fields.Datetime(string='Fecha Inicial')
     fecha_final_liq = fields.Datetime(string='Fecha Final')
     marca_id = fields.Many2one(comodel_name='method_minori.marcas', string='Marca')
@@ -35,7 +36,26 @@ class AccountInvoice(models.Model):
     neto_comision=fields.Integer(string='Neto Comisión',compute='_compute_comision')
     iva_comision=fields.Integer(string='Iva Comisión',compute='_compute_comision')
     total_comision=fields.Integer(string='Total Comisión',compute='_compute_comision')
+#Manual
+    neto_marca_manual = fields.Integer(string='Neto Marca')
+    iva_marca_manual = fields.Integer(compute='_compute_neto_marca_manual', string='Iva Marca')
+    total_marca_manual = fields.Integer(compute='_compute_neto_marca_manual', string='Total Marca')
 
+    @api.onchange('calculo_liq_auto')
+    def _onchange_(self):
+        self.neto_marca_manual = 0
+        self.iva_marca_manual = 0
+        self.total_marca_manual = 0
+        self.neto_marca = 0
+        self.iva_marca = 0
+        self.total_marca = 0
+
+
+    
+    @api.depends('neto_marca_manual')
+    def _compute_neto_marca_manual(self):
+        self.iva_marca_manual=round(self.neto_marca_manual*0.19)
+        self.total_marca_manual=self.neto_marca_manual+self.iva_marca_manual
     
     @api.one
     def agregar_linea_liquidación(self):
@@ -49,7 +69,7 @@ class AccountInvoice(models.Model):
                 'account_id':product_tmpl_id.categ_id.property_account_expense_categ_id.id,
                 'quantity':1,
                 'uom_id':product_tmpl_id.uom_po_id.id,
-                'price_unit':self.neto_marca,
+                'price_unit':self.neto_marca if self.calculo_liq_auto else self.neto_marca_manual,
                 'invoice_line_tax_ids':[(6, 0, [product_tmpl_id.supplier_taxes_id.id])]             ,                    
                 'invoice_id':self.id,
             }
@@ -58,10 +78,12 @@ class AccountInvoice(models.Model):
             linea._get_price_tax()
             linea._set_taxes()
             self.write({
-                'amount_untaxed':self.neto_marca,
-                'amount_tax':self.iva_marca,
-                'amount_total':self.total_marca
-
+                'amount_untaxed':self.neto_marca if self.calculo_liq_auto else self.neto_marca_manual,
+                'amount_tax':self.iva_marca if self.calculo_liq_auto else self.iva_marca_manual,
+                'amount_total':self.total_marca if self.calculo_liq_auto else self.total_marca_manual,
+                'residual':(self.total_marca if self.calculo_liq_auto else self.total_marca_manual)-self.total_comision,
+                'residual_signed':(self.total_marca if self.calculo_liq_auto else self.total_marca_manual)-self.total_comision,
+                'residual_company_signed':(self.total_marca if self.calculo_liq_auto else self.total_marca_manual)-self.total_comision,
             })
             self._compute_amount()    
             self._compute_sign_taxes()        
@@ -70,15 +92,41 @@ class AccountInvoice(models.Model):
             raise Warning("No ha definido un producto para liquidar facturas, vaya al productos y marque la opción!")            
 
 
-    @api.depends('porc_comision')
-    def _compute_comision(self):
-        if self.porc_comision and self.neto_marca:
+    @api.onchange('porc_comision','neto_marca','neto_marca_manual','marca_id','fecha_inicial_liq','fecha_final_liq','calculo_liq_auto')
+    def _onchange__comision(self):
+        if self.porc_comision and self.neto_marca and self.calculo_liq_auto:
             neto_comision=round((self.neto_marca*(self.porc_comision/100)),0)
             iva_comision=round(neto_comision*0.19,0)
             total_comision=neto_comision+iva_comision
             self.neto_comision=neto_comision
             self.iva_comision=iva_comision
             self.total_comision=total_comision
+        if self.porc_comision and self.neto_marca_manual and not self.calculo_liq_auto:
+            neto_comision=round((self.neto_marca_manual*(self.porc_comision/100)),0)
+            iva_comision=round(neto_comision*0.19,0)
+            total_comision=neto_comision+iva_comision
+            self.neto_comision=neto_comision
+            self.iva_comision=iva_comision
+            self.total_comision=total_comision
+
+
+    @api.depends('porc_comision')
+    def _compute_comision(self):
+        if self.porc_comision and self.neto_marca and self.calculo_liq_auto:
+            neto_comision=round((self.neto_marca*(self.porc_comision/100)),0)
+            iva_comision=round(neto_comision*0.19,0)
+            total_comision=neto_comision+iva_comision
+            self.neto_comision=neto_comision
+            self.iva_comision=iva_comision
+            self.total_comision=total_comision
+        if self.porc_comision and self.neto_marca_manual and not self.calculo_liq_auto:
+            neto_comision=round((self.neto_marca_manual*(self.porc_comision/100)),0)
+            iva_comision=round(neto_comision*0.19,0)
+            total_comision=neto_comision+iva_comision
+            self.neto_comision=neto_comision
+            self.iva_comision=iva_comision
+            self.total_comision=total_comision
+
 
     @api.depends('fecha_inicial_liq','fecha_final_liq','marca_id')
     def _compute_totales_marca(self):
@@ -281,15 +329,15 @@ class AccountInvoice(models.Model):
                     "CorreoElectronico": self.partner_id.email if self.partner_id.email else ''
                 },
                 "Totales": {
-                    "MontoNeto": self.amount_untaxed,
+                    "MontoNeto": round(self.amount_untaxed),
                     "TasaIVA": 19,
-                    "IVA": self.amount_tax,
-                    "MontoTotal": self.amount_total,
+                    "IVA": round(self.amount_tax),
+                    "MontoTotal": round(self.amount_total),
                     "Comisiones": [
                         {
-                        "ValorNeto": self.neto_comision,
+                        "ValorNeto": round(self.neto_comision),
                         "ValorExento": 0,
-                        "ValorIVA": self.iva_comision
+                        "ValorIVA": round(self.iva_comision)
                         }
                     ]
                 }
@@ -297,12 +345,12 @@ class AccountInvoice(models.Model):
             "Detalles":self._obtener_lineas(),
             "Comisiones": [
                 {
-                    "TipoMovimiento": "Comisiones",
+                    "TipoMovimiento": "Comision",
                     "Glosa": "Comision",
                     "Tasa": self.porc_comision,
-                    "ValorNeto": self.neto_comision,
+                    "ValorNeto": round(self.neto_comision),
                     "ValorExento": 0,
-                    "ValorIVA": self.iva_comision
+                    "ValorIVA": round(self.iva_comision)
                 }
             ]
         }
@@ -464,56 +512,57 @@ class AccountInvoice(models.Model):
 
                 files=self._firmar_Timbrar_xml(payload,compañia)   
                 response = self.generar_xml_dte(files,folio)
-                sobre=self.generar_sobre_envio(response[1],compañia,folio,receptor='60803000-K')
-                envio=self.enviar_sobre_envio(sobre[1],compañia,tipo=1)
-            dict_text = json.loads(envio.text)  
-            print(envio.status_code)          
-            if envio.status_code==200:
-                self.sii_message=dict_text['responseXml']
+                if response!=False:
+                    sobre=self.generar_sobre_envio(response[1],compañia,folio,receptor='60803000-K')
+                    if sobre!=False:
+                        envio=self.enviar_sobre_envio(sobre[1],compañia,tipo=1)
+                        dict_text = json.loads(envio.text)  
+                        if envio.status_code==200:
+                            self.sii_message=dict_text['responseXml']
 
-                self.sii_result='Enviado'
-                self.sii_document_number=folio
+                            self.sii_result='Enviado'
+                            self.sii_document_number=folio
 
-                nombre_archivo=self._obtener_nombre_xml(response[1])
-                with open(response[1], 'r',encoding='utf-8',errors='ignore') as f:
-                    try:
-                        # text = f.decode('utf8')
-                        # dte_envio = text.read()
-                        dte_envio = f.read()
-                    except Exception as e:
-                        print(e)
-                    
+                            nombre_archivo=self._obtener_nombre_xml(response[1])
+                            with open(response[1], 'r',encoding='utf-8',errors='ignore') as f:
+                                try:
+                                    # text = f.decode('utf8')
+                                    # dte_envio = text.read()
+                                    dte_envio = f.read()
+                                except Exception as e:
+                                    print(e)
+                                
 
-                if not self.sii_xml_request:
-                    envio_id = self.env["sii.xml.envio"].create({
-                            'name': nombre_archivo,
-                            'xml_envio': dte_envio,
-                            'invoice_ids': [[6,0, self.ids]],
-                        })      
-                self.write({
-                    'state':'open',
-                    'sii_track_id':dict_text['trackId']
-                })
+                            if not self.sii_xml_request:
+                                envio_id = self.env["sii.xml.envio"].create({
+                                        'name': nombre_archivo,
+                                        'xml_envio': dte_envio,
+                                        'invoice_ids': [[6,0, self.ids]],
+                                    })      
+                            self.write({
+                                'state':'open',
+                                'sii_track_id':dict_text['trackId']
+                            })
 
-                tree = ET.parse(response[1])
+                            tree = ET.parse(response[1])
 
-                root = tree.getroot()
-                if self.document_class_id.sii_code not in(110,112):      
-                    tag = root.find("Documento")  
-                else:
-                    tag = root.find("Exportaciones")  
+                            root = tree.getroot()
+                            if self.document_class_id.sii_code not in(110,112):      
+                                tag = root.find("Documento")  
+                            else:
+                                tag = root.find("Exportaciones")  
 
-                ted=tag.find("TED")
-                tag_string = ET.tostring(ted, encoding='utf8', method='xml')
-                self.sii_barcode=tag_string
-                self._get_barcode_img()
-#Actualiza secuencia
-                secuencia=self.env['ir.sequence'].search([('sii_document_class_id','=',self.document_class_id.id)])
-                secuencia.write({
-                                    'number_next_actual':folio+1
-                                })
-            else:
-                raise UserError("Ocurrio un error al enviar el documento al SII, la razón es {}".format(dict_text['responseXml']))
+                            ted=tag.find("TED")
+                            tag_string = ET.tostring(ted, encoding='utf8', method='xml')
+                            self.sii_barcode=tag_string
+                            self._get_barcode_img()
+            #Actualiza secuencia
+                            secuencia=self.env['ir.sequence'].search([('sii_document_class_id','=',self.document_class_id.id)])
+                            secuencia.write({
+                                                'number_next_actual':folio+1
+                                            })
+                        else:
+                            raise UserError("Ocurrio un error al enviar el documento al SII, la razón es {}".format(dict_text['responseXml']))
 
     @api.model
     def _get_timbre(self,pathDTE):
@@ -558,12 +607,15 @@ class AccountInvoice(models.Model):
             url=compañia.simple_api_servidor+"/api/v1/dte/liquidacion/generar"
 
         response = requests.post(url, headers=headers, files=files)
-        print(files[0][1][1])
-        pathDTE = os.path.join(compañia.simple_api_ruta_dte,'DTE_'+str(self.document_class_id.sii_code)+'_'+compañia.partner_id.document_number.replace('.','')+'_'+str(folio)+'.xml' )
-        with codecs.open(pathDTE,'w+',"ISO-8859-1") as f:            
-            f.write(response.text)
-            dte=f.read()
-        return response.text,pathDTE
+        if response.status_code==200:
+            pathDTE = os.path.join(compañia.simple_api_ruta_dte,'DTE_'+str(self.document_class_id.sii_code)+'_'+compañia.partner_id.document_number.replace('.','')+'_'+str(folio)+'.xml' )
+            with codecs.open(pathDTE,'w+',"ISO-8859-1") as f:            
+                f.write(response.text)
+                dte=f.read()
+            return response.text,pathDTE
+        else:
+            raise Warning("Problemas para generar XML, el error es : "+response.text)
+            return False
 
 #Genera Caratula sobre envío
     @api.model
@@ -580,12 +632,10 @@ class AccountInvoice(models.Model):
     @api.model
     def generar_sobre_envio(self,pathDTE,company,folio,receptor='60803000-K'):  
         url = company.simple_api_servidor+"/api/v1/envio/generar"
-
         payload={
         "Certificado": self._get_certificado(company),
         "Caratula": self.generar_caratula(company,receptor='60803000-K')
         }
-        print(payload)
         files=self._firmar_Timbrar_xml_sobre(payload,company,pathDTE)
 
         headers = {
@@ -593,14 +643,18 @@ class AccountInvoice(models.Model):
             }        
 
         response = requests.post(url, headers=headers, files=files)
-        pathDTE = os.path.join(company.simple_api_ruta_dte,'Envio_DTE_'+str(self.document_class_id.sii_code)+'_'+company.partner_id.document_number.replace('.','')+'_'+str(folio)+'.xml' )
+        if response.status_code==200:
+            pathDTE = os.path.join(company.simple_api_ruta_dte,'Envio_DTE_'+str(self.document_class_id.sii_code)+'_'+company.partner_id.document_number.replace('.','')+'_'+str(folio)+'.xml' )
 
-        with codecs.open(pathDTE, 'w+', encoding='iso-8859-1') as f:
-            f.write(response.text)
-        with codecs.open(pathDTE, 'r+', encoding='iso-8859-1') as f:
-            dte=f.read()
-        self.sii_xml_dte= dte        
-        return response,pathDTE
+            with codecs.open(pathDTE, 'w+', encoding='iso-8859-1') as f:
+                f.write(response.text)
+            with codecs.open(pathDTE, 'r+', encoding='iso-8859-1') as f:
+                dte=f.read()
+            self.sii_xml_dte= dte        
+            return response,pathDTE
+        else:
+            raise Warning("Problemas para generar sobre de envío, el mensaje es :" + response.text)
+            return False
 
 #Envía sobre de envío
     @api.model

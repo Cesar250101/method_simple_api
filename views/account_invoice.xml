@@ -9,7 +9,8 @@
         <xpath expr="//page[@name='other_info']" position="after">
           <page name="comisiones" string="Comisiones"  attrs="{'invisible':[('use_documents', '=', False)]}">
             <group>
-                <group name="liquidación" string="Liquidación de facturas">
+                <group name="liquidación" string="Liquidación de facturas" attrs="{'invisible': [('calculo_liq_auto', '=', False)]}">
+                  <field name="calculo_liq_auto"/>   
                   <field name="fecha_inicial_liq"/>
                   <field name="fecha_final_liq"/>
                   <field name="marca_id"/>
@@ -17,7 +18,19 @@
                   <field name="iva_marca"/>
                   <field name="total_marca"/>   
                   <button name="agregar_linea_liquidación" string="Agregar Líneas" type="object"/>                                 
+                  <field name="calculo_liq_auto" invisible="1"/>                     
                 </group>
+                <group name="liquidación" string="Liquidación de facturas" attrs="{'invisible': [('calculo_liq_auto', '!=', False)]}">
+                  <field name="calculo_liq_auto"/>   
+                  <field name="marca_id"/>
+                  <field name="neto_marca_manual"/>
+                  <field name="iva_marca_manual"/>
+                  <field name="total_marca_manual"/>   
+                  <button name="agregar_linea_liquidación" string="Agregar Líneas" type="object"/>                                 
+                  <field name="calculo_liq_auto" invisible="1"/>   
+                  
+                </group>
+
                 <group name="comision" string="Cálculo Comisión">
                   <field name="porc_comision"/>
                   <field name="neto_comision"/>
