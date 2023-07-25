@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <template id="dte_external_layout" inherit_id="l10n_cl_fe.dte_external_layout">
+    <xpath expr="//div[hasclass('footer')]" position="replace">
+            <div class="footer">
+                <div class="clearfix">
+                    <div class="row" style="padding: 10px 10px;  border: Black 1px solid;  border-radius: 20px;">
+                        <div class="col-3">
+                            <t t-if="o.sii_barcode_img">
+                                <div class="col-xs-12">
+                                    <img t-if="o.sii_barcode_img" t-att-src="'data:image/png;base64,%s' % to_text(o.sii_barcode_img)" width="250" height="100"/>
+                                </div>
+                                <div class="col-xs-12">
+                                    <p style="text-align:center;color:red; font-size:8px;">
+                                Timbre Electrónico SII
+                                <br/>
+                                Resolución <t t-esc="o.company_id.dte_resolution_number"/> de <t t-esc="o.company_id.dte_resolution_date.year"/> Verifique documento en: www.sii.cl <t t-if="not o._es_boleta()">o en </t><t t-if="o._es_boleta()" t-esc="'%s/boleta/%s' % (o.company_id.website, o.sii_document_number)"/>
+                              </p>
+                                </div>
+                            </t>
+                        </div>
+                        <div class="col-6">
+                            <p t-if="o.comment" style="font-size:12px !important;padding-left: 50px;">
+                                <strong>Comment:</strong>
+                                <br />
+                                <span class="limitetexto" style="max-width:50px;" t-field="o.comment" />
+                            </p>
+                        </div>
+                        <div id="total" class="col-3">
+                            <table class="table table-sm">
+                                <t t-if="o.global_descuentos_recargos">
+                                    <tr t-foreach="o.global_descuentos_recargos" t-as="gdr" class="border-black" style="max-height:11px; font-size:12px !important;">
+                                        <td>
+                                            <strong>Descuento o Recargo Global</strong>
+                                        </td>
+                                        <td class="text-right">
+                                            <span t-esc="gdr.valor if gdr.gdr_type=='amount' else gdr.amount_untaxed_global_dr" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                        </td>
+                                    </tr>
+                                </t>
+                                <tr style="max-height:11px; font-size:12px !important;" name="subtotal">
+                                    <td>
+                                        <strong>Subtotal</strong>
+                                    </td>
+                                    <td class="text-right">
+                                        <span t-field="o.amount_untaxed" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                    </td>
+                                </tr>
+                                <tr name="discount" t-if="display_discount" class="border-black" style="max-height:11px; font-size:12px !important;">
+                                    <td>
+                                        <strong>Descuento</strong>
+                                    </td>
+                                    <td class="text-right">
+                                        <span t-esc="o.getTotalDiscount()" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                    </td>
+                                </tr>
+                                <t t-foreach="o.tax_line_ids" t-as="t">
+                                    <tr t-if="not o._es_boleta() or (o._es_boleta() and ( t.tax_id.amount == 0 or t.tax_id.sii_code in [14, 15, 17])) " style="max-height:11px; font-size:12px !important;">
+                                        <td>
+                                            <span t-field="t.tax_id.description"/>
+                                        </td>
+                                        <td class="text-right">
+                                            <span t-esc="t.amount if t.amount &gt; 0 else t.base" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                        </td>
+                                    </tr>
+                                </t>
+                                <tr class="border-black" style="max-height:12px; font-size:12px !important;">
+                                    <td>
+                                        <strong>Total</strong>
+                                    </td>
+                                    <td class="text-right">
+                                        <span t-field="o.amount_total" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                    </td>
+                                </tr>
+                                <tr class="border-black" style="max-height:12px; font-size:12px !important;">
+                                    <td>
+                                        <strong>Neto Comisión</strong>
+                                    </td>
+                                    <td class="text-right">
+                                        <span t-field="o.neto_comision" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                    </td>
+                                </tr>
+                                <tr class="border-black" style="max-height:12px; font-size:12px !important;">
+                                    <td>
+                                        <strong>IVA Comisión</strong>
+                                    </td>
+                                    <td class="text-right">
+                                        <span t-field="o.iva_comision" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                    </td>
+                                </tr>
+
+
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <t t-if="cedible">
+                    <div class="row" style="padding: 3px 10px;  border: Black 1px solid;  border-radius: 20px;margin-top: 15px;font-size:12px;">
+                        <table>
+                            <tr><td>Nombre:</td></tr>
+                            <tr><td>R.u.t.:</td></tr>
+                            <tr><td>Recinto:</td></tr>
+                            <tr><td>Firma:</td></tr>
+                        </table>
+                    </div>
+                    <div class="row">
+                        <p style="font-size:10px">
+                            "El acuse de recibo que se declara en este acto, de acuerdo a lo dispuesto en la letra b) del Artículo 4°, y la letra c) del Artículo 5° de la Ley 19.983, acredita que la entrega de mercaderías o servicio(s) prestado(s) ha(n) sido recibido(s)"
+                        </p>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <p class="text-right">CEDIBLE</p>
+                        </div>
+                    </div>
+                </t>
+
+
+            </div>
+
+    </xpath>
+  </template>
+</odoo>

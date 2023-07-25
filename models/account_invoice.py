@@ -252,6 +252,8 @@ class AccountInvoice(models.Model):
                     "Recargo": 0,
                     "MontoItem": int(l.price_subtotal)
                 }
+                if self.document_class_id.sii_code==43:
+                    detalle['TipoDocumentoLiquidacion']="39"
                 detalle.update(detalle);
 
         return detalle
@@ -319,7 +321,7 @@ class AccountInvoice(models.Model):
 
                 },
                 "Receptor": {
-                    "Rut": self.partner_id.document_number,
+                    "Rut": self.partner_id.document_number[1:].replace(".","") if self.partner_id.document_number[:1]=="0" else self.partner_id.document_number.replace(".",""),
                     "RazonSocial": self.partner_id.name,
                     "Direccion": self.partner_id.street if self.partner_id.street else None,
                     "Comuna": self.partner_id.city_id.name if self.partner_id.city_id.name else None,
@@ -543,14 +545,16 @@ class AccountInvoice(models.Model):
                                 'state':'open',
                                 'sii_track_id':dict_text['trackId']
                             })
-
                             tree = ET.parse(response[1])
 
                             root = tree.getroot()
-                            if self.document_class_id.sii_code not in(110,112):      
-                                tag = root.find("Documento")  
+                            if self.document_class_id.sii_code in(110,112):      
+                                tag = root.find("Exportaciones")                                  
+                            elif self.document_class_id.sii_code ==43:
+                                tag = root.find("Liquidacion")  
                             else:
-                                tag = root.find("Exportaciones")  
+                                tag = root.find("Documento")  
+
 
                             ted=tag.find("TED")
                             tag_string = ET.tostring(ted, encoding='utf8', method='xml')
@@ -674,7 +678,12 @@ class AccountInvoice(models.Model):
             }        
 
         response = requests.post(url, headers=headers, files=files)
-        return response
+        print(response.text)
+        if response.status_code==200:
+            return response
+        else:
+            raise Warning("Problemas para generar sobre de envío, el mensaje es :" + response.text)
+            return False
 
 
     @api.model
@@ -693,7 +702,7 @@ class AccountInvoice(models.Model):
 
     @api.model
     def _firmar_Timbrar_xml_sobre(self,payload,compañia,pathDTE):
-        posicion=(pathDTE.find('DTE_'))
+        posicion=(pathDTE.find('Envio_'))
         nombre=pathDTE[posicion:]
         files = [
                 ('input', ('', json.dumps(payload), 'application/json')),

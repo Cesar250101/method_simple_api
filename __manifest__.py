@@ -30,7 +30,8 @@
         'views/product_template.xml',
         'views/res_country.xml',
         'data/cron.xml',
-        'wizard/apicaf.xml'
+        'wizard/apicaf.xml',
+        'views/layout.xml'
     ],
     # only loaded in demonstration mode
     'demo': [
