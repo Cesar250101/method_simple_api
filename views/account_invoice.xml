@@ -33,6 +33,8 @@
 
                 <group name="comision" string="Cálculo Comisión">
                   <field name="porc_comision"/>
+                  <field name="fijo_comision"/>
+                  <field name="subtotal_comision"/>       
                   <field name="neto_comision"/>
                   <field name="iva_comision"/>
                   <field name="total_comision"/>

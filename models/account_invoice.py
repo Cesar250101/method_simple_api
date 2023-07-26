@@ -33,7 +33,9 @@ class AccountInvoice(models.Model):
     iva_marca = fields.Integer(compute='_compute_totales_marca', string='Iva Marca')
     total_marca = fields.Integer(compute='_compute_totales_marca', string='Total Marca')
     porc_comision = fields.Float(string='% Comisión')
-    neto_comision=fields.Integer(string='Neto Comisión',compute='_compute_comision')
+    fijo_comision=fields.Integer(string='Valor Fijo')    
+    subtotal_comision=fields.Integer(string='SubTotal Comisión')    
+    neto_comision=fields.Integer(string='Neto Comisión',compute='_compute_comision')    
     iva_comision=fields.Integer(string='Iva Comisión',compute='_compute_comision')
     total_comision=fields.Integer(string='Total Comisión',compute='_compute_comision')
 #Manual
@@ -49,14 +51,61 @@ class AccountInvoice(models.Model):
         self.neto_marca = 0
         self.iva_marca = 0
         self.total_marca = 0
+        self.fijo_comision=0
 
 
     
     @api.depends('neto_marca_manual')
     def _compute_neto_marca_manual(self):
-        self.iva_marca_manual=round(self.neto_marca_manual*0.19)
-        self.total_marca_manual=self.neto_marca_manual+self.iva_marca_manual
+        neto=self.neto_marca_manual
+        self.iva_marca_manual=round(neto*0.19)
+        self.total_marca_manual=neto+self.iva_marca_manual
     
+    @api.onchange('porc_comision','neto_marca','neto_marca_manual','marca_id','fecha_inicial_liq','fecha_final_liq','calculo_liq_auto','fijo_comision')
+    def _onchange__comision(self):
+        if self.porc_comision and self.neto_marca and self.calculo_liq_auto:
+            subtotal_comision=round(((self.neto_marca)*(self.porc_comision/100)),0)
+            neto_comision=round((subtotal_comision+self.fijo_comision),0)
+            iva_comision=round(neto_comision*0.19,0)
+            total_comision=neto_comision+iva_comision
+
+            self.subtotal_comision=subtotal_comision
+            self.neto_comision=neto_comision
+            self.iva_comision=iva_comision
+            self.total_comision=total_comision
+        if self.porc_comision and self.neto_marca_manual and not self.calculo_liq_auto:
+            subtotal_comision=round(((self.neto_marca_manual)*(self.porc_comision/100)),0)
+            neto_comision=round((subtotal_comision+self.fijo_comision),0)
+            iva_comision=round(neto_comision*0.19,0)
+            total_comision=neto_comision+iva_comision
+            self.subtotal_comision=subtotal_comision
+            self.neto_comision=neto_comision
+            self.iva_comision=iva_comision
+            self.total_comision=total_comision
+
+
+    @api.depends('porc_comision')
+    def _compute_comision(self):
+        if self.porc_comision and self.neto_marca and self.calculo_liq_auto:
+            subtotal_comision=round(((self.neto_marca)*(self.porc_comision/100)),0)
+            neto_comision=round((self.neto_marca+self.fijo_comision),0)
+            iva_comision=round(neto_comision*0.19,0)
+            total_comision=neto_comision+iva_comision
+            self.subtotal_comision=subtotal_comision
+            self.neto_comision=neto_comision
+            self.iva_comision=iva_comision
+            self.total_comision=total_comision
+        if self.porc_comision and self.neto_marca_manual and not self.calculo_liq_auto:
+            subtotal_comision=round(((self.neto_marca_manual)*(self.porc_comision/100)),0)
+            neto_comision=round((self.neto_marca_manual+self.fijo_comision),0)
+            iva_comision=round(neto_comision*0.19,0)
+            total_comision=neto_comision+iva_comision
+            self.subtotal_comision=subtotal_comision
+            self.neto_comision=neto_comision
+            self.iva_comision=iva_comision
+            self.total_comision=total_comision
+
+
     @api.one
     def agregar_linea_liquidación(self):
         product_tmpl_id=self.env['product.template'].search([('para_liquidacion','=',True)],limit=1)        
@@ -91,41 +140,6 @@ class AccountInvoice(models.Model):
         else:
             raise Warning("No ha definido un producto para liquidar facturas, vaya al productos y marque la opción!")            
 
-
-    @api.onchange('porc_comision','neto_marca','neto_marca_manual','marca_id','fecha_inicial_liq','fecha_final_liq','calculo_liq_auto')
-    def _onchange__comision(self):
-        if self.porc_comision and self.neto_marca and self.calculo_liq_auto:
-            neto_comision=round((self.neto_marca*(self.porc_comision/100)),0)
-            iva_comision=round(neto_comision*0.19,0)
-            total_comision=neto_comision+iva_comision
-            self.neto_comision=neto_comision
-            self.iva_comision=iva_comision
-            self.total_comision=total_comision
-        if self.porc_comision and self.neto_marca_manual and not self.calculo_liq_auto:
-            neto_comision=round((self.neto_marca_manual*(self.porc_comision/100)),0)
-            iva_comision=round(neto_comision*0.19,0)
-            total_comision=neto_comision+iva_comision
-            self.neto_comision=neto_comision
-            self.iva_comision=iva_comision
-            self.total_comision=total_comision
-
-
-    @api.depends('porc_comision')
-    def _compute_comision(self):
-        if self.porc_comision and self.neto_marca and self.calculo_liq_auto:
-            neto_comision=round((self.neto_marca*(self.porc_comision/100)),0)
-            iva_comision=round(neto_comision*0.19,0)
-            total_comision=neto_comision+iva_comision
-            self.neto_comision=neto_comision
-            self.iva_comision=iva_comision
-            self.total_comision=total_comision
-        if self.porc_comision and self.neto_marca_manual and not self.calculo_liq_auto:
-            neto_comision=round((self.neto_marca_manual*(self.porc_comision/100)),0)
-            iva_comision=round(neto_comision*0.19,0)
-            total_comision=neto_comision+iva_comision
-            self.neto_comision=neto_comision
-            self.iva_comision=iva_comision
-            self.total_comision=total_comision
 
 
     @api.depends('fecha_inicial_liq','fecha_final_liq','marca_id')
