@@ -44,16 +44,20 @@ class AccountInvoice(models.Model):
     total_marca_manual = fields.Integer(compute='_compute_neto_marca_manual', string='Total Marca')
 
     @api.onchange('calculo_liq_auto')
-    def _onchange_(self):
-        self.neto_marca_manual = 0
-        self.iva_marca_manual = 0
-        self.total_marca_manual = 0
-        self.neto_marca = 0
-        self.iva_marca = 0
-        self.total_marca = 0
-        self.fijo_comision=0
-
-
+    def _onchange_calculo_liq_auto(self):
+        self.marca_id=False
+        self.neto_marca=False
+        self.iva_marca=False
+        self.total_marca=False
+        self.neto_marca_manual=False
+        self.iva_marca_manual=False
+        self.total_marca_manual=False
+        self.porc_comision=False
+        self.fijo_comision=False
+        self.subtotal_comision=False
+        self.neto_comision=False
+        self.iva_comision=False
+        self.total_comision=False
     
     @api.depends('neto_marca_manual')
     def _compute_neto_marca_manual(self):
@@ -62,9 +66,10 @@ class AccountInvoice(models.Model):
         self.total_marca_manual=neto+self.iva_marca_manual
     
     @api.onchange('porc_comision','neto_marca','neto_marca_manual','marca_id','fecha_inicial_liq','fecha_final_liq','calculo_liq_auto','fijo_comision')
-    def _onchange__comision(self):
-        if self.porc_comision and self.neto_marca and self.calculo_liq_auto:
-            subtotal_comision=round(((self.neto_marca)*(self.porc_comision/100)),0)
+    def _onchange_comision(self):
+        if self.porc_comision:
+            valor_neto_marca=self.neto_marca if self.calculo_liq_auto else self.neto_marca_manual            
+            subtotal_comision=round(((valor_neto_marca)*(self.porc_comision/100)),0)
             neto_comision=round((subtotal_comision+self.fijo_comision),0)
             iva_comision=round(neto_comision*0.19,0)
             total_comision=neto_comision+iva_comision
@@ -73,33 +78,16 @@ class AccountInvoice(models.Model):
             self.neto_comision=neto_comision
             self.iva_comision=iva_comision
             self.total_comision=total_comision
-        if self.porc_comision and self.neto_marca_manual and not self.calculo_liq_auto:
-            subtotal_comision=round(((self.neto_marca_manual)*(self.porc_comision/100)),0)
-            neto_comision=round((subtotal_comision+self.fijo_comision),0)
-            iva_comision=round(neto_comision*0.19,0)
-            total_comision=neto_comision+iva_comision
-            self.subtotal_comision=subtotal_comision
-            self.neto_comision=neto_comision
-            self.iva_comision=iva_comision
-            self.total_comision=total_comision
-
 
     @api.depends('porc_comision')
     def _compute_comision(self):
         if self.porc_comision and self.neto_marca and self.calculo_liq_auto:
-            subtotal_comision=round(((self.neto_marca)*(self.porc_comision/100)),0)
-            neto_comision=round((self.neto_marca+self.fijo_comision),0)
+            valor_porc_comisión=self.neto_marca if self.calculo_liq_auto else self.neto_marca_manual            
+            subtotal_comision=round(((valor_porc_comisión)*(self.porc_comision/100)),0)
+            neto_comision=round(subtotal_comision+self.fijo_comision ,0)
             iva_comision=round(neto_comision*0.19,0)
-            total_comision=neto_comision+iva_comision
-            self.subtotal_comision=subtotal_comision
-            self.neto_comision=neto_comision
-            self.iva_comision=iva_comision
-            self.total_comision=total_comision
-        if self.porc_comision and self.neto_marca_manual and not self.calculo_liq_auto:
-            subtotal_comision=round(((self.neto_marca_manual)*(self.porc_comision/100)),0)
-            neto_comision=round((self.neto_marca_manual+self.fijo_comision),0)
-            iva_comision=round(neto_comision*0.19,0)
-            total_comision=neto_comision+iva_comision
+            total_comision=(neto_comision+iva_comision)
+
             self.subtotal_comision=subtotal_comision
             self.neto_comision=neto_comision
             self.iva_comision=iva_comision
@@ -144,45 +132,46 @@ class AccountInvoice(models.Model):
 
     @api.depends('fecha_inicial_liq','fecha_final_liq','marca_id')
     def _compute_totales_marca(self):
-        if self.fecha_final_liq and self.fecha_inicial_liq and self.marca_id:
-            query="""
-                        SELECT 
-                        sum(pol.price_subtotal)
-                        from pos_order po left join sii_document_class sdc on po.document_class_id =sdc.id
-                        inner join pos_order_line pol on po.id =pol.order_id 
-                        inner join product_product pp on pol.product_id =pp.id
-                        inner join product_template pt on pp.product_tmpl_id =pt.id  
-                        left join res_partner rp on po.partner_id =rp.id
-                        left join method_minori_marcas mmm on pt.marca_id =mmm.id
-                        left join product_category pc on pt.categ_id =pc.id 
-                        left join pos_session ps on po.session_id =ps.id 
-                        left join pos_config pc2 on ps.config_id =pc2.id
-                        where date_order between %s and %s
-                        and mmm.id =%s
-                        union 
-                        SELECT 
-                        sum(pol.price_subtotal) as neto
-                        from account_invoice po left join sii_document_class sdc on po.document_class_id =sdc.id
-                        inner join account_invoice_line pol on po.id =pol.invoice_id 
-                        inner join product_product pp on pol.product_id =pp.id
-                        inner join product_template pt on pp.product_tmpl_id =pt.id  
-                        left join res_partner rp on po.partner_id =rp.id
-                        left join method_minori_marcas mmm on pt.marca_id =mmm.id
-                        left join product_category pc on pt.categ_id =pc.id
-                        where po.date_invoice between %s and %s
-                        and mmm.id =%s
-                    """ 
-            self.env.cr.execute(query,[
-                                        self.fecha_inicial_liq.strftime("%Y-%m-%d %H:%M:%S"), self.fecha_final_liq.strftime("%Y-%m-%d %H:%M:%S"), self.marca_id.id,
-                                        self.fecha_inicial_liq.strftime("%Y-%m-%d %H:%M:%S"), self.fecha_final_liq.strftime("%Y-%m-%d %H:%M:%S"), self.marca_id.id,
-                                        ])
-            rec=self.env.cr.fetchall()
-            neto=0
-            for r in rec:
-                neto+=r[0]
-            self.neto_marca=neto
-            self.iva_marca=round(neto*0.19,0)
-            self.total_marca=neto+round(neto*0.19,0)
+        if self.calculo_liq_auto:
+            if self.fecha_final_liq and self.fecha_inicial_liq and self.marca_id:
+                query="""
+                            SELECT 
+                            sum(pol.price_subtotal)
+                            from pos_order po left join sii_document_class sdc on po.document_class_id =sdc.id
+                            inner join pos_order_line pol on po.id =pol.order_id 
+                            inner join product_product pp on pol.product_id =pp.id
+                            inner join product_template pt on pp.product_tmpl_id =pt.id  
+                            left join res_partner rp on po.partner_id =rp.id
+                            left join method_minori_marcas mmm on pt.marca_id =mmm.id
+                            left join product_category pc on pt.categ_id =pc.id 
+                            left join pos_session ps on po.session_id =ps.id 
+                            left join pos_config pc2 on ps.config_id =pc2.id
+                            where date_order between %s and %s
+                            and mmm.id =%s
+                            union 
+                            SELECT 
+                            sum(pol.price_subtotal) as neto
+                            from account_invoice po left join sii_document_class sdc on po.document_class_id =sdc.id
+                            inner join account_invoice_line pol on po.id =pol.invoice_id 
+                            inner join product_product pp on pol.product_id =pp.id
+                            inner join product_template pt on pp.product_tmpl_id =pt.id  
+                            left join res_partner rp on po.partner_id =rp.id
+                            left join method_minori_marcas mmm on pt.marca_id =mmm.id
+                            left join product_category pc on pt.categ_id =pc.id
+                            where po.date_invoice between %s and %s
+                            and mmm.id =%s
+                        """ 
+                self.env.cr.execute(query,[
+                                            self.fecha_inicial_liq.strftime("%Y-%m-%d %H:%M:%S"), self.fecha_final_liq.strftime("%Y-%m-%d %H:%M:%S"), self.marca_id.id,
+                                            self.fecha_inicial_liq.strftime("%Y-%m-%d %H:%M:%S"), self.fecha_final_liq.strftime("%Y-%m-%d %H:%M:%S"), self.marca_id.id,
+                                            ])
+                rec=self.env.cr.fetchall()
+                neto=0
+                for r in rec:
+                    neto+=r[0]
+                self.neto_marca=neto
+                self.iva_marca=round(neto*0.19,0)
+                self.total_marca=neto+round(neto*0.19,0)
 
 
     @api.multi
