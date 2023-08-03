@@ -201,41 +201,44 @@ class AccountInvoice(models.Model):
 
     @api.one
     def _transporte(self):
-        aduana={}
-        TipoBultos=[]
-        for t in self.bultos:
-            TipoBultos.append(
-                                {
-                                    "CodigoTipoBulto":t.tipo_bulto.code,
-                                    "CantidadBultos":t.cantidad_bultos,
-                                    "IdContainer":t.id_container,
-                                    "Sello":t.sello,
-                                    "EmisorSello":t.emisor_sello
-                                }
-                            )
+        if self.ind_servicio!=4:
+            aduana={}
+            TipoBultos=[]
+            for t in self.bultos:
+                TipoBultos.append(
+                                    {
+                                        "CodigoTipoBulto":t.tipo_bulto.code,
+                                        "CantidadBultos":t.cantidad_bultos,
+                                        "IdContainer":t.id_container,
+                                        "Sello":t.sello,
+                                        "EmisorSello":t.emisor_sello
+                                    }
+                                )
 
-        aduana={
-                    "CodigoModalidadVenta":self.payment_term_id.modalidad_venta.code,
-                    "CodigoClausulaVenta":self.clausula_venta.code,
-                    "TotalClausulaVenta":self.amount_total,
-                    "CodigoViaTransporte":self.via.code,
-                    "CodigoPuertoEmbarque":self.puerto_embarque.code,
-                    "CodigoPuertoDesembarque":self.puerto_desembarque.code,
-                    "Tara":self.tara,
-                    "CodigoUnidadMedidaTara":self.uom_tara.code,
-                    "PesoBruto":self.peso_bruto,
-                    "CodigoUnidadPesoBruto":self.uom_peso_bruto.code,
-                    "PesoNeto":self.peso_neto,
-                    "CodigoUnidadPesoNeto":self.uom_peso_bruto.code,
-                    "CantidadBultos":self.total_bultos,
-                    "TipoBultos":TipoBultos,
-                    "MontoFlete":self.monto_flete,
-                    "MontoSeguro":self.monto_seguro,
-                    "CodigoPaisReceptor":self.pais_id.code_dte,
-                    "CodigoPaisDestino":self.pais_destino.code
-                }
-        aduana.update(aduana)
-        return aduana
+            aduana={
+                        "CodigoModalidadVenta":self.payment_term_id.modalidad_venta.code,
+                        "CodigoClausulaVenta":self.clausula_venta.code,
+                        "TotalClausulaVenta":self.amount_total,
+                        "CodigoViaTransporte":self.via.code,
+                        "CodigoPuertoEmbarque":self.puerto_embarque.code,
+                        "CodigoPuertoDesembarque":self.puerto_desembarque.code,
+                        "Tara":self.tara,
+                        "CodigoUnidadMedidaTara":self.uom_tara.code,
+                        "PesoBruto":self.peso_bruto,
+                        "CodigoUnidadPesoBruto":self.uom_peso_bruto.code,
+                        "PesoNeto":self.peso_neto,
+                        "CodigoUnidadPesoNeto":self.uom_peso_bruto.code,
+                        "CantidadBultos":self.total_bultos,
+                        "TipoBultos":TipoBultos,
+                        "MontoFlete":self.monto_flete,
+                        "MontoSeguro":self.monto_seguro,
+                        "CodigoPaisReceptor":self.pais_id.code_dte,
+                        "CodigoPaisDestino":self.pais_destino.code
+                    }
+            aduana.update(aduana)
+            return aduana
+        else:
+            return []
 
 
     @api.one
@@ -505,6 +508,8 @@ class AccountInvoice(models.Model):
                 elif self.document_class_id.sii_code ==43:
                     payload=self._obtener_datos_liquidacion_factura(folio,)
                 
+                print(payload)
+
                 payload["Certificado"]=self._get_certificado(compañia)    
 
     #Agrega las referencias del documento            
