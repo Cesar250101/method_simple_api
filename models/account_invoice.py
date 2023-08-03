@@ -238,7 +238,7 @@ class AccountInvoice(models.Model):
             aduana.update(aduana)
             return aduana
         else:
-            return []
+            return None
 
 
     @api.one
