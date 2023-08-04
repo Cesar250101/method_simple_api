@@ -168,7 +168,8 @@ class AccountInvoice(models.Model):
                 rec=self.env.cr.fetchall()
                 neto=0
                 for r in rec:
-                    neto+=r[0]
+                    if r[0]!=None:
+                        neto+=r[0]
                 self.neto_marca=neto
                 self.iva_marca=round(neto*0.19,0)
                 self.total_marca=neto+round(neto*0.19,0)
