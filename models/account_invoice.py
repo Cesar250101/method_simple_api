@@ -623,7 +623,7 @@ class AccountInvoice(models.Model):
         if response.status_code==200:
             pathDTE = os.path.join(compañia.simple_api_ruta_dte,'DTE_'+str(self.document_class_id.sii_code)+'_'+compañia.partner_id.document_number.replace('.','')+'_'+str(folio)+'.xml' )
             with codecs.open(pathDTE,'w+',"ISO-8859-1") as f:            
-                f.write(response.text)
+                f.sudo().write(response.text)
                 dte=f.read()
             return response.text,pathDTE
         else:
