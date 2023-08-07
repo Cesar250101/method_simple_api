@@ -1,5 +1,52 @@
 <odoo>
   <data>
+  <!-- Facturas de venta -->
+    <record id="method_simple_api.invoice_form" model="ir.ui.view">
+      <field name="name">method.simple.api.invoice.form</field>
+      <field name="model">account.invoice</field>
+      <field name="inherit_id" ref="account.invoice_form"/>
+      <field name="arch" type="xml">      
+        <xpath expr="//page[@name='other_info']" position="after">
+          <page name="comisiones" string="Comisiones"  attrs="{'invisible':[('use_documents', '=', False)]}">
+            <group>
+                <group name="liquidación" string="Liquidación de facturas" attrs="{'invisible': [('calculo_liq_auto', '=', False)]}">
+                  <field name="calculo_liq_auto"/>   
+                  <field name="fecha_inicial_liq"/>
+                  <field name="fecha_final_liq"/>
+                  <field name="marca_id"/>
+                  <field name="neto_marca"/>
+                  <field name="iva_marca"/>
+                  <field name="total_marca"/>   
+                  <button name="agregar_linea_liquidación" string="Agregar Líneas" type="object"/>                                 
+                  <field name="calculo_liq_auto" invisible="1"/>                     
+                </group>
+                <group name="liquidación" string="Liquidación de facturas" attrs="{'invisible': [('calculo_liq_auto', '!=', False)]}">
+                  <field name="calculo_liq_auto"/>   
+                  <field name="marca_id"/>
+                  <field name="neto_marca_manual"/>
+                  <field name="iva_marca_manual"/>
+                  <field name="total_marca_manual"/>   
+                  <button name="agregar_linea_liquidación" string="Agregar Líneas" type="object"/>                                 
+                  <field name="calculo_liq_auto" invisible="1"/>   
+                  
+                </group>
+
+                <group name="comision" string="Cálculo Comisión">
+                  <field name="porc_comision"/>
+                  <field name="fijo_comision"/>
+                  <field name="subtotal_comision"/>       
+                  <field name="neto_comision"/>
+                  <field name="iva_comision"/>
+                  <field name="total_comision"/>
+                </group>
+              
+            </group>
+          </page>
+        </xpath>   
+      </field>
+    </record>
+
+
   <!-- Facturas de proveedor -->
     <record id="method_simple_api.invoice_supplier_form" model="ir.ui.view">
       <field name="name">method.simple.api.invoice.supplier.form</field>
