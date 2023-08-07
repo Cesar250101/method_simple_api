@@ -35,7 +35,7 @@ class AccountInvoice(models.Model):
     porc_comision = fields.Float(string='% Comisión')
     fijo_comision=fields.Integer(string='Valor Fijo')    
     subtotal_comision=fields.Integer(string='SubTotal Comisión')    
-    neto_comision=fields.Integer(string='Neto Comisión',compute='_compute_comision')    
+    neto_comision=fields.Integer(string='Neto Comisión',compute='_compute_comision',)    
     iva_comision=fields.Integer(string='Iva Comisión',compute='_compute_comision')
     total_comision=fields.Integer(string='Total Comisión',compute='_compute_comision')
 #Manual
@@ -61,9 +61,10 @@ class AccountInvoice(models.Model):
     
     @api.depends('neto_marca_manual')
     def _compute_neto_marca_manual(self):
-        neto=self.neto_marca_manual
-        self.iva_marca_manual=round(neto*0.19)
-        self.total_marca_manual=neto+self.iva_marca_manual
+        if self.calculo_liq_auto==False:
+            neto=self.neto_marca_manual
+            self.iva_marca_manual=round(neto*0.19)
+            self.total_marca_manual=neto+self.iva_marca_manual
     
     @api.onchange('porc_comision','neto_marca','neto_marca_manual','marca_id','fecha_inicial_liq','fecha_final_liq','calculo_liq_auto','fijo_comision')
     def _onchange_comision(self):
@@ -81,7 +82,7 @@ class AccountInvoice(models.Model):
 
     @api.depends('porc_comision')
     def _compute_comision(self):
-        if self.porc_comision and self.neto_marca and self.calculo_liq_auto:
+        if self.porc_comision:
             valor_porc_comisión=self.neto_marca if self.calculo_liq_auto else self.neto_marca_manual            
             subtotal_comision=round(((valor_porc_comisión)*(self.porc_comision/100)),0)
             neto_comision=round(subtotal_comision+self.fijo_comision ,0)
@@ -107,21 +108,24 @@ class AccountInvoice(models.Model):
                 'quantity':1,
                 'uom_id':product_tmpl_id.uom_po_id.id,
                 'price_unit':self.neto_marca if self.calculo_liq_auto else self.neto_marca_manual,
-                'invoice_line_tax_ids':[(6, 0, [product_tmpl_id.supplier_taxes_id.id])]             ,                    
+                'invoice_line_tax_ids':[(6, 0, [product_tmpl_id.taxes_id.id])]             ,                    
                 'invoice_id':self.id,
             }
             linea=invoice_line.create(vals)
-            linea._compute_price()
             linea._get_price_tax()
-            linea._set_taxes()
-            self.write({
+            # linea._set_taxes()
+            linea._prepare_invoice_line()
+
+            values={
                 'amount_untaxed':self.neto_marca if self.calculo_liq_auto else self.neto_marca_manual,
-                'amount_tax':self.iva_marca if self.calculo_liq_auto else self.iva_marca_manual,
+                'amount_tax':self.iva_marca+self.iva_marca_manual,
                 'amount_total':self.total_marca if self.calculo_liq_auto else self.total_marca_manual,
                 'residual':(self.total_marca if self.calculo_liq_auto else self.total_marca_manual)-self.total_comision,
                 'residual_signed':(self.total_marca if self.calculo_liq_auto else self.total_marca_manual)-self.total_comision,
                 'residual_company_signed':(self.total_marca if self.calculo_liq_auto else self.total_marca_manual)-self.total_comision,
-            })
+
+            }
+            self.write(values)
             self._compute_amount()    
             self._compute_sign_taxes()        
 
