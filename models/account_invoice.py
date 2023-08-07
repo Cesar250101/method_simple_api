@@ -107,14 +107,14 @@ class AccountInvoice(models.Model):
                 'account_id':product_tmpl_id.categ_id.property_account_expense_categ_id.id,
                 'quantity':1,
                 'uom_id':product_tmpl_id.uom_po_id.id,
-                'price_unit':self.neto_marca if self.calculo_liq_auto else self.neto_marca_manual,
+                'price_unit':self.total_marca if self.calculo_liq_auto else self.total_marca_manual,
                 'invoice_line_tax_ids':[(6, 0, [product_tmpl_id.taxes_id.id])]             ,                    
                 'invoice_id':self.id,
             }
             linea=invoice_line.create(vals)
             linea._get_price_tax()
-            # linea._set_taxes()
-            linea._prepare_invoice_line()
+            if any(line.invoice_line_tax_ids for line in self.invoice_line_ids) and not self.tax_line_ids:
+                self.compute_taxes()
 
             values={
                 'amount_untaxed':self.neto_marca if self.calculo_liq_auto else self.neto_marca_manual,
