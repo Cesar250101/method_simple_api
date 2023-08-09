@@ -72,7 +72,7 @@
                                         <span t-field="o.amount_total" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
                                     </td>
                                 </tr>
-                                <t t-if="o.sii_code=43">
+                                <t t-if="o.sii_code==43">
                                     <tr class="border-black" style="max-height:12px; font-size:12px !important;">
                                         <td>
                                             <strong>Neto Comisión</strong>
