@@ -72,41 +72,42 @@
                                         <span t-field="o.amount_total" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
                                     </td>
                                 </tr>
-                                <tr class="border-black" style="max-height:12px; font-size:12px !important;">
-                                    <td>
-                                        <strong>Neto Comisión</strong>
-                                    </td>
-                                    <td class="text-right">
-                                        <span t-field="o.neto_comision" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
-                                    </td>
-                                </tr>
-                                <tr class="border-black" style="max-height:12px; font-size:12px !important;">
-                                    <td>
-                                        <strong>IVA Comisión</strong>
-                                    </td>
-                                    <td class="text-right">
-                                        <span t-field="o.iva_comision" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
-                                    </td>
-                                </tr>
-                                <tr class="border-black" style="max-height:12px; font-size:12px !important;">
-                                    <td>
-                                        <strong>Total Comisión</strong>
-                                    </td>
-                                    <td class="text-right">
-                                        <span t-field="o.total_comision" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
-                                    </td>
-                                </tr>
-                                <t t-set="total_liquido" t-value="0"/>
-                                <t t-set="total_liquido" t-value="o.amount_total-o.total_comision"/> 
-                                <tr class="border-black" style="max-height:12px; font-size:12px !important;">
-                                    <td>
-                                        <strong>Total Líquido</strong>
-                                    </td>
-                                    <td class="text-right">
-                                        <span t-esc="total_liquido" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
-                                    </td>
-                                </tr>
-
+                                <t t-if="o.sii_code!=43">
+                                    <tr class="border-black" style="max-height:12px; font-size:12px !important;">
+                                        <td>
+                                            <strong>Neto Comisión</strong>
+                                        </td>
+                                        <td class="text-right">
+                                            <span t-field="o.neto_comision" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-black" style="max-height:12px; font-size:12px !important;">
+                                        <td>
+                                            <strong>IVA Comisión</strong>
+                                        </td>
+                                        <td class="text-right">
+                                            <span t-field="o.iva_comision" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-black" style="max-height:12px; font-size:12px !important;">
+                                        <td>
+                                            <strong>Total Comisión</strong>
+                                        </td>
+                                        <td class="text-right">
+                                            <span t-field="o.total_comision" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                        </td>
+                                    </tr>
+                                    <t t-set="total_liquido" t-value="0"/>
+                                    <t t-set="total_liquido" t-value="o.amount_total-o.total_comision"/> 
+                                    <tr class="border-black" style="max-height:12px; font-size:12px !important;">
+                                        <td>
+                                            <strong>Total Líquido</strong>
+                                        </td>
+                                        <td class="text-right">
+                                            <span t-esc="total_liquido" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                        </td>
+                                    </tr>
+                                </t>
 
                             </table>
                         </div>
