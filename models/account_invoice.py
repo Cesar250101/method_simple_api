@@ -535,7 +535,7 @@ class AccountInvoice(models.Model):
 
     #Agrega las referencias del documento            
                 if self.referencias:
-                    payload["Referencias"]=self._obtener_referencias()
+                    payload['Exportaciones']["Referencias"]=self._obtener_referencias()
                 # if self.global_descuentos_recargos:
                 #     payload["DescuentosRecargos"]=self._obtener_DR()
                 
