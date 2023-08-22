@@ -222,7 +222,7 @@ class AccountInvoice(models.Model):
 
     @api.one
     def _transporte(self):
-        if self.ind_servicio!=4:
+        if self.ind_servicio!=4 and self.sii_code!=112:
             aduana={}
             TipoBultos=[]
             for t in self.bultos:
@@ -303,7 +303,7 @@ class AccountInvoice(models.Model):
         else:
             return []
 
-    @api.model
+    @api.multi
     def _obtener_referencias(self):
         if self.referencias:
             referencias={}
@@ -319,7 +319,7 @@ class AccountInvoice(models.Model):
 
             return referencias
         else:
-            return None
+            return []
 
     @api.model
     def _obtener_datos_liquidacion_factura(self,folio):
@@ -524,6 +524,7 @@ class AccountInvoice(models.Model):
                         },
                         "Detalles":self._obtener_lineas(),
                         "DescuentosRecargos":self._obtener_DR(),
+                        "Referencias":[self._obtener_referencias()],
                     },
                     }
                 elif self.document_class_id.sii_code ==43:
@@ -534,8 +535,9 @@ class AccountInvoice(models.Model):
                 payload["Certificado"]=self._get_certificado(compañia)    
 
     #Agrega las referencias del documento            
-                if self.referencias:
-                    payload['Exportaciones']["Referencias"]=self._obtener_referencias()
+                # if self.referencias:
+                #     referencias=[]
+                #     payload['Exportaciones']["Referencias"]=self._obtener_referencias()
                 # if self.global_descuentos_recargos:
                 #     payload["DescuentosRecargos"]=self._obtener_DR()
                 
