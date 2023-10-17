@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import base64
+from bs4 import BeautifulSoup
+from lxml import etree
 from odoo import models, fields, api
 from http.client import HTTPSConnection
 from base64 import b64encode
@@ -361,7 +363,7 @@ class AccountInvoice(models.Model):
                     "MontoNeto": round(self.amount_untaxed),
                     "TasaIVA": 19,
                     "IVA": round(self.amount_tax),
-                    "MontoTotal": round(self.amount_total),
+                    "MontoTotal": round(self.amount_total-self.total_comision),
                     "Comisiones": [
                         {
                         "ValorNeto": round(self.neto_comision),
@@ -685,7 +687,10 @@ class AccountInvoice(models.Model):
                 f.write(response.text)
             with codecs.open(pathDTE, 'r+', encoding='iso-8859-1') as f:
                 dte=f.read()
-            self.sii_xml_dte= dte        
+                x = etree.parse(pathDTE)
+                pretty_xml = etree.tostring(x, pretty_print=True, encoding="ISO-8859-1", xml_declaration=False).decode('ISO-8859-1')   
+                # print(pretty_xml)
+            self.sii_xml_dte= pretty_xml        
             return response,pathDTE
         else:
             raise Warning("Problemas para generar sobre de envío, el mensaje es :" + response.text)
