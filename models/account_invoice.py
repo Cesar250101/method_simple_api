@@ -261,7 +261,7 @@ class AccountInvoice(models.Model):
             aduana.update(aduana)
             return aduana
         else:
-            return None
+            return ''
 
 
     @api.one
@@ -526,16 +526,16 @@ class AccountInvoice(models.Model):
                         },
                         "Detalles":self._obtener_lineas(),
                         "DescuentosRecargos":self._obtener_DR(),
-                        "Referencias":[self._obtener_referencias()],
+                        "Referencias":self._obtener_referencias(),
                     },
                     }
                 elif self.document_class_id.sii_code ==43:
                     payload=self._obtener_datos_liquidacion_factura(folio,)
                 
-                print(payload)
+
 
                 payload["Certificado"]=self._get_certificado(compañia)    
-
+                print(payload)
     #Agrega las referencias del documento            
                 # if self.referencias:
                 #     referencias=[]
