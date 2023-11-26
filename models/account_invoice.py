@@ -261,7 +261,7 @@ class AccountInvoice(models.Model):
             aduana.update(aduana)
             return aduana
         else:
-            return ''
+            return []
 
 
     @api.one
@@ -530,9 +530,7 @@ class AccountInvoice(models.Model):
                     },
                     }
                 elif self.document_class_id.sii_code ==43:
-                    payload=self._obtener_datos_liquidacion_factura(folio,)
-                
-
+                    payload=self._obtener_datos_liquidacion_factura(folio,)                
 
                 payload["Certificado"]=self._get_certificado(compañia)    
                 print(payload)
