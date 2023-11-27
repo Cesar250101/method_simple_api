@@ -261,7 +261,7 @@ class AccountInvoice(models.Model):
             aduana.update(aduana)
             return aduana
         else:
-            return []
+            return {}
 
 
     @api.one
@@ -308,7 +308,7 @@ class AccountInvoice(models.Model):
     @api.multi
     def _obtener_referencias(self):
         if self.referencias:
-            referencias={}
+            referencias=[]
             for l in self.referencias:
                 referencia={
                     "FechaDocumentoReferencia": l.fecha_documento.isoformat(),
@@ -317,11 +317,11 @@ class AccountInvoice(models.Model):
                     "RazonReferencia": l.motivo,
                     "FolioReferencia": l.origen
                 }
-                referencias.update(referencia)
+                referencias.append(referencia)
 
             return referencias
         else:
-            return []
+            return {}
 
     @api.model
     def _obtener_datos_liquidacion_factura(self,folio):
