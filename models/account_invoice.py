@@ -185,7 +185,7 @@ class AccountInvoice(models.Model):
     @api.multi
     def invoice_validate(self):
         factura=self._generar_xml()
-        if self.document_class_id.sii_code not in(46,110,112,43):
+        if self.document_class_id.sii_code not in(46,110,112,43,111):
             return super(AccountInvoice, self).invoice_validate()        
 
     # @api.multi
@@ -224,7 +224,7 @@ class AccountInvoice(models.Model):
 
     @api.one
     def _transporte(self):
-        if self.ind_servicio!=4 and self.sii_code!=112:
+        if self.ind_servicio!=4 and self.sii_code!=112 and self.sii_code!=111:
             aduana={}
             TipoBultos=[]
             for t in self.bultos:
@@ -391,7 +391,7 @@ class AccountInvoice(models.Model):
 
     @api.one
     def _generar_xml(self):
-        if self.document_class_id.sii_code in(46,110,112,43):
+        if self.document_class_id.sii_code in(46,110,112,43,111):
             compañia=self.env.user.company_id
             ruta_certificado=compañia.simple_api_ruta_certificado
     #Obtiene folios desde la clase de documentos        
@@ -474,8 +474,8 @@ class AccountInvoice(models.Model):
                 response = self.generar_xml_dte(files,folio)
                 sobre=self.generar_sobre_envio(response[1],compañia,folio,receptor='60803000-K')
                 envio=self.enviar_sobre_envio(sobre[1],compañia,tipo=1)
-            elif self.document_class_id.sii_code in(110,112,43):
-                if self.document_class_id.sii_code in(110,112):
+            elif self.document_class_id.sii_code in(110,112,43,111):
+                if self.document_class_id.sii_code in(110,112,111):
                     payload={
                     "Exportaciones":{
                         "Encabezado":{
@@ -486,7 +486,7 @@ class AccountInvoice(models.Model):
                                 "FechaVencimiento":self.date_due.isoformat(),
                                 "FormaPago":self.payment_term_id.dte_sii_code,
                                 "FormaPagoExportacion":self.payment_term_id.forma_pago_aduanas.code if self.document_class_id.sii_code in(110,112) else '',
-                                "MedioPago":self.payment_term_id.modalidad_venta.code if self.document_class_id.sii_code in(110,112) else '',
+                                "MedioPago":self.payment_term_id.modalidad_venta.code if self.document_class_id.sii_code in(110,112,111) else '',
                                 "IndServicio":self.ind_servicio
                             },
 
@@ -507,7 +507,8 @@ class AccountInvoice(models.Model):
                                 "Comuna": self.partner_id.city_id.name if self.partner_id.city_id.name else compañia.partner_id.city_id.name,
                                 "Giro": self.partner_id.activity_description.name if self.partner_id.activity_description.name else compañia.partner_id.activity_description.name,
                                 "Extranjero":{
-                                "Nacionalidad":self.pais_id.code_dte if self.pais_id else '997'
+                                    "Id":1000,
+                                    "Nacionalidad":self.pais_id.code_dte if self.pais_id else '997'
                                 }
                             },
                             "Transporte":{"Aduana":self._transporte()[0]},                    
@@ -579,7 +580,7 @@ class AccountInvoice(models.Model):
                             tree = ET.parse(response[1])
 
                             root = tree.getroot()
-                            if self.document_class_id.sii_code in(110,112):      
+                            if self.document_class_id.sii_code in(110,112,111):      
                                 tag = root.find("Exportaciones")                                  
                             elif self.document_class_id.sii_code ==43:
                                 tag = root.find("Liquidacion")  
