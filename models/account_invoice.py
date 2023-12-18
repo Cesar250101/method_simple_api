@@ -84,6 +84,7 @@ class AccountInvoice(models.Model):
             self.total_comision=total_comision
 
     @api.depends('porc_comision')
+    @api.one
     def _compute_comision(self):
         if self.porc_comision:
             valor_porc_comisión=self.neto_marca if self.calculo_liq_auto else self.neto_marca_manual            
