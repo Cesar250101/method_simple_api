@@ -138,6 +138,7 @@ class AccountInvoice(models.Model):
 
 
     @api.depends('fecha_inicial_liq','fecha_final_liq','marca_id')
+    @api.one
     def _compute_totales_marca(self):
         if self.calculo_liq_auto:
             if self.fecha_final_liq and self.fecha_inicial_liq and self.marca_id:
