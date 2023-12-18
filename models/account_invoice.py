@@ -47,6 +47,7 @@ class AccountInvoice(models.Model):
     total_marca_manual = fields.Integer(compute='_compute_neto_marca_manual', string='Total Marca')
 
     @api.onchange('calculo_liq_auto')
+    @api.one
     def _onchange_calculo_liq_auto(self):
         self.marca_id=False
         self.neto_marca=False
@@ -63,6 +64,7 @@ class AccountInvoice(models.Model):
         self.total_comision=False
     
     @api.depends('neto_marca_manual')
+    @api.one
     def _compute_neto_marca_manual(self):
         if self.calculo_liq_auto==False:
             neto=self.neto_marca_manual
