@@ -531,9 +531,15 @@ class AccountInvoice(models.Model):
                         },
                         "Detalles":self._obtener_lineas(),
                         "DescuentosRecargos":self._obtener_DR(),
-                        "Referencias":self._obtener_referencias(),
+                        # "Referencias":self._obtener_referencias(),
                     },
                     }
+                
+                    if self.referencias:
+                        payload["Exportaciones"]["Referencias"] = self._obtener_referencias()
+
+                    print(payload)
+
                 elif self.document_class_id.sii_code ==43:
                     payload=self._obtener_datos_liquidacion_factura(folio,)                
 
