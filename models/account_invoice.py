@@ -655,9 +655,9 @@ class AccountInvoice(models.Model):
         response = requests.post(url, headers=headers, files=files)
         if response.status_code==200:
             pathDTE = os.path.join(compañia.simple_api_ruta_dte,'DTE_'+str(self.document_class_id.sii_code)+'_'+compañia.partner_id.document_number.replace('.','')+'_'+str(folio)+'.xml' )
-            with codecs.sudo().open(pathDTE,'w+',"ISO-8859-1") as f:            
-                f.sudo().write(response.text)
-                dte=f.sudo().read()
+            with codecs.open(pathDTE,'w+',"ISO-8859-1") as f:            
+                f.write(response.text)
+                dte=f.read()
             return response.text,pathDTE
         else:
             raise Warning("Problemas para generar XML, el error es : "+response.text)
