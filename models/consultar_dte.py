@@ -94,12 +94,8 @@ class CoonsultarEstadoBoleta(models.Model):
                 
                 # i.sii_message=datos_diccionario['responseXml']
 
-class CoonsultarEstadoBoletaProceso(models.Model):
-    _inherit = 'pos.order'
-
-    
     @api.model
-    def consultar_estado_boleta(self):
+    def consultar_estado_boleta_proceso(self):
         compañia=self.env.user.company_id
         _model_invoice=self.env['account.invoice']
         payload={
