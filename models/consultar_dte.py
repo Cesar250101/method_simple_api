@@ -105,9 +105,7 @@ class CoonsultarEstadoBoleta(models.Model):
         invoices=self.env['pos.order'].search([('sii_result','in',['Proceso']),
                                                 ('sii_xml_request','!=',False),
                                                 ('date_order','>=','2024-01-01')
-                                                ],
-                                                
-                                                limit=50)
+                                                ],)
         for i in invoices:
             payload["RutEmpresa"]= compañia.partner_id.document_number.replace('.','')
             payload["TrackId"]= i.sii_xml_request.sii_send_ident
